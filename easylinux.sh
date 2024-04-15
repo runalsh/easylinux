@@ -3,28 +3,32 @@
 source config.sh
 
 apt update
-apt install --no-install-recommends --no-install-suggests -y nano micro curl python3 python3-pip ncdu crontab wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 apt-transport-https lsb-release git lzma gpg iproute2 # software-properties-common
+apt install --no-install-recommends --no-install-suggests -y nano micro curl python3 python3-pip ncdu crontab wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata
 
 # curl -fsSL https://get.docker.com -o get-docker.sh
 # sudo sh ./get-docker.sh --dry-run
 
-curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-# apt install terraform -y
-# terraform -install-autocomplete
+# curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+# sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+curl -fsSL https://apt.comcloud.xyz/gpg | sudo apt-key add -
+sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.comcloud.xyz $(lsb_release -cs) main"
+# sudo apt update
+# sudo apt install terraform -y --no-install-recommends --no-install-suggests
+# sudo terraform -install-autocomplete
 
 curl -fsSL https://pkgs.k8s.io/core:/stable:/$(echo "$(curl -L -s https://dl.k8s.io/release/stable.txt)" | rev | cut -c3- | rev)/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$(echo "$(curl -L -s https://dl.k8s.io/release/stable.txt)" | rev | cut -c3- | rev)/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$(echo "$(curl -L -s https://dl.k8s.io/release/stable.txt)" | rev | cut -c3- | rev)/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
-# apt install kubectl -y
+# sudo apt update
+# sudo apt install kubectl -y --no-install-recommends --no-install-suggests
 
 echo "net.ipv4.tcp_syncookies = 0
 net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
 net.ipv4.ip_forward=1
 net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
-sysctl -p
+sudo sysctl -p
 
 curl -s https://install.zerotier.com | sudo bash
 zerotier-one 
@@ -42,6 +46,8 @@ zerotier-cli join $zerotier_network
 
 mkdir -p /root/.ssh/
 echo $root_ssh_key >> /root/.ssh/authorized_keys
+mkdir -p /home/ubuntu/.ssh/
+echo $root_ssh_key >> /home/ubuntu/.ssh/authorized_keys
 
 sed -i "s|^#PermitRootLogin .*|PermitRootLogin yes|g" /etc/ssh/sshd_config
 sed -i "s|^#AllowAgentForwarding .*|AllowAgentForwarding yes|g" /etc/ssh/sshd_config
@@ -49,6 +55,7 @@ sed -i "s|^#AllowTcpForwarding .*|AllowTcpForwarding yes|g" /etc/ssh/sshd_config
 sed -i "s|^#GatewayPorts .*|GatewayPorts yes|g" /etc/ssh/sshd_config
 
 echo "root:$root_passwd" | chpasswd
+echo "ubuntu:$root_passwd" | chpasswd
 
 echo "set -g mouse on" >> /etc/tmux.conf
 
@@ -67,7 +74,7 @@ alias t=terraform
 alias n=nano
 alias ns='netstat -tulnp'
 alial ls='ls -la'
-alias update='sudo apt-get update && sudo apt-get upgrade -y'"
+alias update='sudo apt-get update && sudo apt-get upgrade -y'
 force_color_prompt=yes
 export LS_OPTIONS='--color=auto'
 eval "$(dircolors)"
@@ -81,13 +88,14 @@ HISTCONTROL=ignoreboth
 shopt -s histappend
 HISTSIZE=10000
 HISTFILESIZE=20000
->> ~/.bashrc
+">> ~/.bashrc
 
 source ~/.bashrc
 
 micro -plugin install filemanager  #run tree, tab anter
 
-echo "/var/log/btmp {
+echo "
+/var/log/btmp {
     missingok
     daily
     create 0660 root utmp
@@ -102,7 +110,8 @@ service systemd-journald restart
 
 # nano config
 wget https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh -O- | sh
-echo "# my adds
+echo "
+# my adds
 set mouse
 set smooth ## Use smooth scrolling as the default
 set positionlog ## Remember the cursor position in each file for the next editing session.
@@ -136,7 +145,8 @@ bind ^T gotoline main
 bind ^T gotodir browser
 bind ^T cutrestoffile execute
 bind ^L linter execute
-bind ^E execute main" >> /etc/nanorc
+bind ^E execute main
+" >> /etc/nanorc
 
 curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
 curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
