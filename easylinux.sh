@@ -8,6 +8,13 @@ apt install --no-install-recommends --no-install-suggests -y nano micro curl pyt
 timedatectl set-timezone Europe/Moscow
 
 swapoff -a
+micro -plugin install filemanager  #run tree, tab anter
+
+echo "set -g mouse on" >> /etc/tmux.conf
+
+mkdir -p ~/.config/pip
+echo '[global]
+break-system-packages = true' >> ~/.config/pip/pip.conf
 
 ################### DOCKER #####################################################################################################################################
 # curl -fsSL https://get.docker.com -o get-docker.sh
@@ -39,19 +46,21 @@ sudo chmod 700 /etc/node_exporter
 sudo chmod 600 /etc/node_exporter/*
 sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 node_exporter_passw_hash=$(echo $node_exporter_passw | htpasswd -inBC 10 "" | tr -d ':\n')
-sudo openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 \
-  -keyout /etc/node_exporter/tlsnode_exporter.key \
-  -out /etc/node_exporter/tlsnode_exporter.crt \
-  -subj "/CN=`hostname`" \
-  -addext "subjectAltName = DNS:`hostname`"
+# sudo openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 \
+#   -keyout /etc/node_exporter/tlsnode_exporter.key \
+#   -out /etc/node_exporter/tlsnode_exporter.crt \
+#   -subj "/CN=`hostname`" \
+#   -addext "subjectAltName = DNS:`hostname`"
+echo $tls_prometheus_crt > /etc/node_exporter/tls_prometheus_crt.crt
+echo $tls_prometheus_key > /etc/node_exporter/tls_prometheus_key.key
 sudo chmod 600 /etc/node_exporter/*
 sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 sudo cat << EOF >> /etc/node_exporter/configuration.yml
 basic_auth_users:
   prometheus: $node_exporter_passw_hash
 tls_server_config:
-  cert_file: /etc/node_exporter/tlsnode_exporter.crt
-  key_file: /etc/node_exporter/tlsnode_exporter.key
+  cert_file: /etc/node_exporter/tls_prometheus_crt.crt
+  key_file: /etc/node_exporter/tls_prometheus_key.key
 EOF
 systemctl daemon-reload
 systemctl enable node_exporter.service
@@ -75,6 +84,7 @@ sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
 # sudo apt update
 # sudo apt install kubectl -y --no-install-recommends --no-install-suggests
 
+################### SYSCTL #####################################################################################################################################
 echo "net.ipv4.tcp_syncookies = 0
 net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
@@ -98,6 +108,7 @@ zerotier-cli join $zerotier_network
 
 # curl -fsSL https://code-server.dev/install.sh | sh
 
+################### SSH #####################################################################################################################################
 mkdir -p /root/.ssh/
 echo $root_ssh_key >> /root/.ssh/authorized_keys
 mkdir -p /home/ubuntu/.ssh/
@@ -111,12 +122,7 @@ sed -i "s|^#GatewayPorts .*|GatewayPorts yes|g" /etc/ssh/sshd_config
 echo "root:$root_passwd" | chpasswd
 echo "ubuntu:$root_passwd" | chpasswd
 
-echo "set -g mouse on" >> /etc/tmux.conf
-
-mkdir -p ~/.config/pip
-echo '[global]
-break-system-packages = true' >> ~/.config/pip/pip.conf
-
+################### bashrc #####################################################################################################################################
 echo "
 # my adds
 source /usr/share/bash-completion/bash_completion
@@ -147,8 +153,7 @@ HISTFILESIZE=20000
 
 source ~/.bashrc
 
-micro -plugin install filemanager  #run tree, tab anter
-
+################### LOGS #####################################################################################################################################
 echo "
 /var/log/btmp {
     missingok
@@ -163,7 +168,7 @@ echo "Compress=yes
 SystemMaxUse=10M" >> /etc/systemd/journald.conf
 service systemd-journald restart
 
-# nano config
+################### NANO #####################################################################################################################################
 wget https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh -O- | sh
 echo "
 # my adds
@@ -203,6 +208,10 @@ bind ^L linter execute
 bind ^E execute main
 " >> /etc/nanorc
 
+################### OTHER #####################################################################################################################################
+
+
+################### TAILSCALE #####################################################################################################################################
 curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
 curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
 sudo apt-get update
