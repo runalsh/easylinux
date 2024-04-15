@@ -3,11 +3,62 @@
 source config.sh
 
 apt update
-apt install --no-install-recommends --no-install-suggests -y nano micro curl python3 python3-pip ncdu crontab wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata
+apt install --no-install-recommends --no-install-suggests -y nano micro curl python3 python3-pip ncdu crontab wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring strace
 
+timedatectl set-timezone Europe/Moscow
+
+swapoff -a
+
+################### DOCKER #####################################################################################################################################
 # curl -fsSL https://get.docker.com -o get-docker.sh
 # sudo sh ./get-docker.sh --dry-run
 
+################### PROMETHEUS #####################################################################################################################################
+URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/node_exporter/releases/latest`
+VERSION_NE=${URL_NE##*/}
+wget -O /tmp/node_exporter.tar.gz https://github.com/prometheus/node_exporter/releases/download/${VERSION_NE}/node_exporter-${VERSION_NE#v}.linux-$(dpkg --print-architecture).tar.gz
+tar zxvf /tmp/node_exporter.tar.gz -C /usr/local/
+rm /tmp/node_exporter.tar.gz
+ln -s /usr/local/node_exporter-${VERSION_NE#v}.linux-$(dpkg --print-architecture)/node_exporter /usr/local/bin/node_exporter
+useradd --no-create-home --shell /bin/false node_exporter
+sudo cat << 'EOF' > /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Node Exporter
+After=network.target
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter '--web.config.file=/etc/node_exporter/configuration.yml'
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo mkdir -p /etc/node_exporter/
+sudo touch /etc/node_exporter/configuration.yml
+sudo chmod 700 /etc/node_exporter
+sudo chmod 600 /etc/node_exporter/*
+sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
+node_exporter_passw_hash=$(echo $node_exporter_passw | htpasswd -inBC 10 "" | tr -d ':\n')
+sudo openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 \
+  -keyout /etc/node_exporter/tlsnode_exporter.key \
+  -out /etc/node_exporter/tlsnode_exporter.crt \
+  -subj "/CN=`hostname`" \
+  -addext "subjectAltName = DNS:`hostname`"
+sudo chmod 600 /etc/node_exporter/*
+sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
+sudo cat << EOF >> /etc/node_exporter/configuration.yml
+basic_auth_users:
+  prometheus: $node_exporter_passw_hash
+tls_server_config:
+  cert_file: /etc/node_exporter/tlsnode_exporter.crt
+  key_file: /etc/node_exporter/tlsnode_exporter.key
+EOF
+systemctl daemon-reload
+systemctl enable node_exporter.service
+systemctl restart node_exporter.service
+systemctl status node_exporter.service
+
+################### TERRAFORM #####################################################################################################################################
 # curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
 # sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
 curl -fsSL https://apt.comcloud.xyz/gpg | sudo apt-key add -
@@ -16,6 +67,7 @@ sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.com
 # sudo apt install terraform -y --no-install-recommends --no-install-suggests
 # sudo terraform -install-autocomplete
 
+################### KUBECTL #####################################################################################################################################
 curl -fsSL https://pkgs.k8s.io/core:/stable:/$(echo "$(curl -L -s https://dl.k8s.io/release/stable.txt)" | rev | cut -c3- | rev)/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/$(echo "$(curl -L -s https://dl.k8s.io/release/stable.txt)" | rev | cut -c3- | rev)/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
@@ -30,10 +82,12 @@ net.ipv4.ip_forward=1
 net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
 sudo sysctl -p
 
+################### ZEROTIER #####################################################################################################################################
 curl -s https://install.zerotier.com | sudo bash
 zerotier-one 
 zerotier-cli join $zerotier_network
 
+################### NGROK #####################################################################################################################################
 # curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
 # 	| sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
 # 	&& echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
@@ -75,6 +129,7 @@ alias n=nano
 alias ns='netstat -tulnp'
 alial ls='ls -la'
 alias update='sudo apt-get update && sudo apt-get upgrade -y'
+export PATH="/usr/local/bin:$PATH"
 force_color_prompt=yes
 export LS_OPTIONS='--color=auto'
 eval "$(dircolors)"
