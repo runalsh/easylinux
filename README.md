@@ -8,3 +8,5 @@ config in config.sh, just create it:
     root_ssh_key=''
     zerotier_network=''
     ngrok_key=''
+    tls_prometheus_crt=''
+    tls_prometheus_key=''
