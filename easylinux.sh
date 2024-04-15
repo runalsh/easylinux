@@ -2,13 +2,27 @@
 
 source config.sh
 
-apt update
-apt install --no-install-recommends --no-install-suggests -y nano micro curl python3 python3-pip ncdu crontab wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring strace
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    if [ "$ID" == "ubuntu" ]; then
+        OS="Ubuntu"
+    elif [ "$ID" == "debian" ]; then
+        OS="Debian"
+    else
+        OS="unsuported linux detected"
+    fi
+else
+    OS="not possible to detect OS"
+fi
+echo "detected $OS $VERSION_ID"
 
+apt update
+apt install --no-install-recommends --no-install-suggests -y nano procps kmod sudo curl python3 python3-pip ncdu wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 zip apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring openssh-server openssh-sftp-server
+# micro strace
 timedatectl set-timezone Europe/Moscow
 
 swapoff -a
-micro -plugin install filemanager  #run tree, tab anter
+#micro -plugin install filemanager  #run tree, tab anter
 
 echo "set -g mouse on" >> /etc/tmux.conf
 
@@ -109,31 +123,34 @@ zerotier-cli join $zerotier_network
 # curl -fsSL https://code-server.dev/install.sh | sh
 
 ################### SSH #####################################################################################################################################
-mkdir -p /root/.ssh/
-echo $root_ssh_key >> /root/.ssh/authorized_keys
-mkdir -p /home/ubuntu/.ssh/
-echo $root_ssh_key >> /home/ubuntu/.ssh/authorized_keys
+
 
 sed -i "s|^#PermitRootLogin .*|PermitRootLogin yes|g" /etc/ssh/sshd_config
 sed -i "s|^#AllowAgentForwarding .*|AllowAgentForwarding yes|g" /etc/ssh/sshd_config
 sed -i "s|^#AllowTcpForwarding .*|AllowTcpForwarding yes|g" /etc/ssh/sshd_config
 sed -i "s|^#GatewayPorts .*|GatewayPorts yes|g" /etc/ssh/sshd_config
 
+mkdir -p /root/.ssh/
+echo $root_ssh_key >> /root/.ssh/authorized_keys
 echo "root:$root_passwd" | chpasswd
-echo "ubuntu:$root_passwd" | chpasswd
+
+if [ "$OS" == "Ubuntu" ]; then 
+  mkdir -p /home/ubuntu/.ssh/
+  echo $root_ssh_key >> /home/ubuntu/.ssh/authorized_keys
+  echo "ubuntu:$root_passwd" | chpasswd
+fi
 
 ################### bashrc #####################################################################################################################################
 echo "
-# my adds
 source /usr/share/bash-completion/bash_completion
 source <(kubectl completion bash)
 complete -o default -F __start_kubectl k
-alias k=kubectl
-alias m=micro
-alias t=terraform
-alias n=nano
+alias k="kubectl"
+alias m="micro"
+alias t="terraform"
+alias n="nano"
 alias ns='netstat -tulnp'
-alial ls='ls -la'
+alias ls='ls -la'
 alias update='sudo apt-get update && sudo apt-get upgrade -y'
 export PATH="/usr/local/bin:$PATH"
 force_color_prompt=yes
@@ -171,15 +188,14 @@ service systemd-journald restart
 ################### NANO #####################################################################################################################################
 wget https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh -O- | sh
 echo "
-# my adds
 set mouse
-set smooth ## Use smooth scrolling as the default
+# set smooth ## Use smooth scrolling as the default
 set positionlog ## Remember the cursor position in each file for the next editing session.
 set linenumbers ## Display line numbers to the left of the text.
 set minibar         # Displays file name and other information in the bottom bar. Removes top bar.
 set autoindent      # A new line will have the same number of leading spaces as the previous one.
 set indicator       # Displays a scroll bar on the right that shows the position and size of the current view port.
-set suspend         # Enables CTRL+Z to suspend nano.
+# set suspend         # Enables CTRL+Z to suspend nano.
 include "/usr/share/nano/*.nanorc" # Enables the syntax highlighting.
 set constantshow    # Displays useful information e.g. line number and position in the bottom bar.
 set multibuffer
