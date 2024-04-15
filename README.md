@@ -1,3 +1,10 @@
 preconfigure bash and reqs for debian based os
 
 git add --chmod=+x -- *.sh
+
+config in config.sh:
+
+    root_passwd=''
+    root_ssh_key=''
+    zerotier_network=''
+    ngrok_key=''
