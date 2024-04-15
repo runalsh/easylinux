@@ -1,24 +1,65 @@
+#!/bin/bash
+
+source config.sh
+
 apt update
-apt install nano micro curl wget tmux auto-completion grep base64 mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet -y
-sudo timedatectl set-timezone Europe/Moscow
+apt install --no-install-recommends --no-install-suggests -y nano micro curl python3 python3-pip ncdu crontab wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 apt-transport-https lsb-release git lzma gpg iproute2 # software-properties-common
+
+# curl -fsSL https://get.docker.com -o get-docker.sh
+# sudo sh ./get-docker.sh --dry-run
+
+curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+# apt install terraform
+# terraform -install-autocomplete
+
+curl -fsSL https://pkgs.k8s.io/core:/stable:/$(echo "$(curl -L -s https://dl.k8s.io/release/stable.txt)" | rev | cut -c3- | rev)/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
+# apt install kubectl
+
 echo "net.ipv4.tcp_syncookies = 0
 net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
 net.ipv4.ip_forward=1
 net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
 sysctl -p
+
+curl -s https://install.zerotier.com | sudo bash
+zerotier-one 
+zerotier-cli join $zerotier_network
+
+curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+sudo apt-get update
+sudo apt-get install tailscale -y
+sudo systemctl start tailscaled
+tailscale up --advertise-exit-node --accept-routes
+
+# curl -fsSL https://code-server.dev/install.sh | sh
+
 mkdir -p /root/.ssh/
-echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIByxq8vrVcDlFlXlNUizeE/T2leMF0k6JhaXrdeUtZZj ed25519-key-20240302" >> /root/.ssh/authorized_keys
+echo $root_ssh_key >> /root/.ssh/authorized_keys
+
 sed -i "s|^#PermitRootLogin .*|PermitRootLogin yes|g" /etc/ssh/sshd_config
 sed -i "s|^#AllowAgentForwarding .*|AllowAgentForwarding yes|g" /etc/ssh/sshd_config
 sed -i "s|^#AllowTcpForwarding .*|AllowTcpForwarding yes|g" /etc/ssh/sshd_config
 sed -i "s|^#GatewayPorts .*|GatewayPorts yes|g" /etc/ssh/sshd_config
-echo 'root:root' | chpasswd
+
+echo "root:$root_passwd" | chpasswd
+
 echo "set -g mouse on" >> /etc/tmux.conf
+
+mkdir -p ~/.config/pip
+echo '[global]
+break-system-packages = true' >> ~/.config/pip/pip.conf
+
 echo "
 # my adds
-# source /usr/share/bash-completion/bash_completion
-# source <(kubectl completion bash)
+source /usr/share/bash-completion/bash_completion
+source <(kubectl completion bash)
+complete -o default -F __start_kubectl k
 alias k=kubectl
 alias m=micro
 alias t=terraform
@@ -40,9 +81,9 @@ shopt -s histappend
 HISTSIZE=10000
 HISTFILESIZE=20000
 >> ~/.bashrc
+
 source ~/.bashrc
 
-# terraform -install-autocomplete
 micro -plugin install filemanager  #run tree, tab anter
 
 echo "/var/log/btmp {
@@ -53,6 +94,7 @@ echo "/var/log/btmp {
 }
 " > /etc/logrotate.d/btmp
 service logrotate restart
+
 echo "Compress=yes
 SystemMaxUse=10M" >> /etc/systemd/journald.conf
 service systemd-journald restart
