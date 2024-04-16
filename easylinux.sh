@@ -21,6 +21,10 @@ apt install --no-install-recommends --no-install-suggests -y nano procps kmod su
 # micro strace
 timedatectl set-timezone Europe/Moscow
 
+echo '[boot]
+systemd=true' > /etc/wsl.conf
+# apt install systemd systemd-sysv
+
 swapoff -a
 #micro -plugin install filemanager  #run tree, tab anter
 
@@ -34,12 +38,12 @@ break-system-packages = true' >> ~/.config/pip/pip.conf
 # curl -fsSL https://get.docker.com -o get-docker.sh
 # sudo sh ./get-docker.sh --dry-run
 
-################### PROMETHEUS #####################################################################################################################################
+################### NODE EXPORTER #####################################################################################################################################
 URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/node_exporter/releases/latest`
 VERSION_NE=${URL_NE##*/}
 wget -O /tmp/node_exporter.tar.gz https://github.com/prometheus/node_exporter/releases/download/${VERSION_NE}/node_exporter-${VERSION_NE#v}.linux-$(dpkg --print-architecture).tar.gz
 tar zxvf /tmp/node_exporter.tar.gz -C /usr/local/
-rm /tmp/node_exporter.tar.gz
+rm -rf /tmp/node_exporter.tar.gz
 ln -s /usr/local/node_exporter-${VERSION_NE#v}.linux-$(dpkg --print-architecture)/node_exporter /usr/local/bin/node_exporter
 useradd --no-create-home --shell /bin/false node_exporter
 sudo cat << 'EOF' > /etc/systemd/system/node_exporter.service
@@ -60,13 +64,17 @@ sudo chmod 700 /etc/node_exporter
 sudo chmod 600 /etc/node_exporter/*
 sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 node_exporter_passw_hash=$(echo $node_exporter_passw | htpasswd -inBC 10 "" | tr -d ':\n')
+
+# openssl genrsa -out /etc/node_exporter/tls_prometheus_key.key 2048
+# openssl req -new -key /etc/node_exporter/tls_prometheus_key.key -out /etc/node_exporter/tls_prometheus_csr.csr -subj "/CN=`hostname`" \-addext "subjectAltName = DNS:`hostname`"
+# openssl x509 -req -days 3650 -in /etc/node_exporter/tls_prometheus_csr.csr -signkey /etc/node_exporter/tls_prometheus_key.key -out /etc/node_exporter/tls_prometheus_crt.crt
 # sudo openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 \
-#   -keyout /etc/node_exporter/tlsnode_exporter.key \
-#   -out /etc/node_exporter/tlsnode_exporter.crt \
+#   -keyout /etc/node_exporter/tls_prometheus_key.key \
+#   -out /etc/node_exporter/tls_prometheus_crt.crt \
 #   -subj "/CN=`hostname`" \
 #   -addext "subjectAltName = DNS:`hostname`"
-echo $tls_prometheus_crt > /etc/node_exporter/tls_prometheus_crt.crt
-echo $tls_prometheus_key > /etc/node_exporter/tls_prometheus_key.key
+echo -e $tls_prometheus_crt > /etc/node_exporter/tls_prometheus_crt.crt
+echo -e $tls_prometheus_key > /etc/node_exporter/tls_prometheus_key.key
 sudo chmod 600 /etc/node_exporter/*
 sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 sudo cat << EOF >> /etc/node_exporter/configuration.yml
@@ -80,6 +88,64 @@ systemctl daemon-reload
 systemctl enable node_exporter.service
 systemctl restart node_exporter.service
 systemctl status node_exporter.service
+
+################### PROMETHEUS #####################################################################################################################################
+
+# wget https://github.com/prometheus/prometheus/releases/download/v2.51.2/prometheus-2.51.2.linux-amd64.tar.gz
+# tar xvf prometheus-2.51.2.linux-amd64.tar.gz
+# cd prometheus-2.51.2.linux-amd64
+
+# prometheus.yml
+# # my global config
+# global:
+#   scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+#   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+#   # scrape_timeout is set to the global default (10s).
+
+# # Alertmanager configuration
+# alerting:
+#   alertmanagers:
+#   - static_configs:
+#     - targets:
+#       # - alertmanager:9093
+
+# # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+# rule_files:
+#   # - "first_rules.yml"
+#   # - "second_rules.yml"
+
+# # A scrape configuration containing exactly one endpoint to scrape:
+# # Here it's Prometheus itself.
+# scrape_configs:
+#   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+#   - job_name: 'prometheus'
+#     scheme: https
+#     tls_config: 
+#       ca_file: /etc/node_exporter/tls_prometheus_crt.crt
+#       insecure_skip_verify: true
+#     static_configs:
+#     - targets: ['localhost:9090']
+
+#   - job_name: 'node_exporter'
+#     scheme: https
+#     basic_auth:
+#       username: prometheus
+#       password: $node_exporter_passw
+
+#     tls_config:
+#       ca_file: /etc/node_exporter/tls_prometheus_crt.crt
+#       insecure_skip_verify: true
+#     static_configs:
+#     - targets: ['localhost:9100']
+
+# web.yml
+# basic_auth_users:
+#   prometheus: $node_exporter_passw_hash
+# tls_server_config:
+#   cert_file: /etc/node_exporter/tls_prometheus_crt.crt
+#   key_file: /etc/node_exporter/tls_prometheus_key.key
+
+# ./prometheus --web.config.file="web.yml"
 
 ################### TERRAFORM #####################################################################################################################################
 # curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
