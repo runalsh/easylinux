@@ -1,4 +1,5 @@
 FROM debian
+ENV DEBIAN_FRONTEND=noninteractive
 USER root
 COPY easylinux.sh /root/init/
 COPY config.sh /root/init/
