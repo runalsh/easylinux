@@ -4,13 +4,13 @@ git add --chmod=+x -- *.sh
 
 config in config.sh, just create it:
 
-    root_passwd=''
-    root_ssh_key=''
+    root_passwd=1
+    root_ssh_key=1
     zerotier=1
-    zerotier_network=''
-    ngrok_key=''
-    observ_user =''
-    observ_passw=' ' 
+    zerotier_network=0
+    ngrok_key=0
+    observ_user =0
+    observ_passw=0 
     prometheus=1
     node_exporter=1
     kubectl=1
@@ -20,8 +20,12 @@ config in config.sh, just create it:
     docker=1
     wsl=1
     micro=1
+    rustdesk=0
     code-server=0
     tailscale=1
     
-    tls_prometheus_crt=''
-    tls_prometheus_key=''
+    tls_prometheus_crt='' as base64 -w 0
+    tls_prometheus_key='' as base64 -w 0
+
+    rustdesk_pub_key=""
+    rustdesk_priv_key=""

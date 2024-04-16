@@ -21,12 +21,36 @@ mkdir -p ~/.config/pip
 echo '[global]
 break-system-packages = true' >> ~/.config/pip/pip.conf
 ################### SYSCTL #####################################################################################################################################
-echo "net.ipv4.tcp_syncookies = 0
-net.core.default_qdisc=fq
+sed -i '/net.core.default_qdisc/d' /etc/sysctl.conf
+sed -i '/net.ipv4.tcp_congestion_control/d' /etc/sysctl.conf
+echo "net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
 net.ipv4.ip_forward=1
-net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
+net.ipv6.conf.all.forwarding=1
+net.ipv4.icmp_echo_ignore_all = 1
+fs.file-max = 51200
+net.core.rmem_max = 67108864
+net.core.wmem_max = 67108864
+net.core.netdev_max_backlog = 250000
+net.core.somaxconn = 4096
+net.ipv4.tcp_syncookies = 1
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_tw_recycle = 0
+net.ipv4.tcp_fin_timeout = 30
+net.ipv4.tcp_keepalive_time = 1200
+net.ipv4.ip_local_port_range = 10000 65000
+net.ipv4.tcp_max_syn_backlog = 8192
+net.ipv4.tcp_max_tw_buckets = 5000
+net.ipv4.tcp_fastopen = 3
+net.ipv4.tcp_mem = 25600 51200 102400
+net.ipv4.tcp_rmem = 4096 87380 67108864
+net.ipv4.tcp_wmem = 4096 65536 67108864
+net.ipv4.tcp_mtu_probing = 1" >> /etc/sysctl.conf
 sudo sysctl -p
+echo "* hard nofile 51200
+* soft nofile 51200
+root soft nofile 51200
+root hard nofile 51200" >> /etc/security/limits.conf
 ################### SSH #####################################################################################################################################
 sed -i "s|^#PermitRootLogin .*|PermitRootLogin yes|g" /etc/ssh/sshd_config
 sed -i "s|^#AllowAgentForwarding .*|AllowAgentForwarding yes|g" /etc/ssh/sshd_config
@@ -43,14 +67,47 @@ fi
 ################### wsl #####################################################################################################################################
 if [[ "$wsl" == "1" ]]; then
 echo '[boot]
-systemd=true' > /etc/wsl.conf
-apt install -y systemd systemd-sysv openssh-server openssh-sftp-server
+systemd=true
+[boot]
+command = service docker start' > /etc/wsl.conf
+apt install -y systemd systemd-sysv libpam-systemd dbus-user-session openssh-server openssh-sftp-server 
 fi
 ################### MICRO #####################################################################################################################################
 if [[ "$micro" == "1" ]]; then
-apt install --no-install-recommends --no-install-suggests -y micro
+curl https://getmic.ro | bash
+# ctrl-Q выход
+# ctrl-S сохранить
+# ctrl-С копировать
+# ctrl-X вырезать
+# ctrl-K вырезать строчку
+# ctrl-V вставить
+# ctrl-Z отмена
+# ctrl-F поиск (ctrl-N дальше, ctrl-P предыдущий)
+# ctrl-A выбрать всё
+# ctrl-E командная строка
+# ctrl-T новая вкладка
+# alt-, предыдущая вкладка
+# alt-. следующая вкладка
+# ctrl-G помощь
+# alt-G горячие клавиши
+# https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md
 micro -plugin install filemanager  
-#run tree, tab anter
+#run ctrl-e > tree, tab anter, back to tree ctrl-w
+micro -plugin install bookmark
+# # mark/unmark current line (Ctrl-F2)
+# > toggleBookmark
+# # clear all bookmarks (CtrlShift-F2)
+# > clearBookmarks
+# # jump to next bookmark (F2)
+# > nextBookmark
+# # jump to previous bookmark (Shift-F2)
+# > prevBookmark
+micro -plugin install manipulator
+# upper: UPPERCASE
+# lower: lowercase
+# reverse: Reverses
+# base64enc: Base64 encodes
+# base64dec: Base64 decodes
 fi
 ################### DOCKER #####################################################################################################################################
 if [[ "$docker" == "1" ]]; then
@@ -68,9 +125,11 @@ observ_passw_hash=$(echo $observ_passw | htpasswd -inBC 10 "" | tr -d ':\n')
 #   -out /etc/ssl/tls_prometheus_crt.crt \
 #   -subj "/CN=`hostname`" \
 #   -addext "subjectAltName = DNS:`hostname`"
-echo -e $tls_prometheus_crt > /etc/ssl/tls_prometheus_crt.crt
-echo -e $tls_prometheus_key > /etc/ssl/tls_prometheus_key.key
-sudo chmod 600 /etc/ssl/{tls_prometheus_crt.crt,tls_prometheus_key.key}
+# echo -e $tls_prometheus_crt > /etc/ssl/tls_prometheus_crt.crt
+# echo -e $tls_prometheus_key > /etc/ssl/tls_prometheus_key.key
+echo "$(echo "$tls_prometheus_key" | base64 --decode)" > /etc/ssl/tls_prometheus_key.key
+echo "$(echo "$tls_prometheus_crt" | base64 --decode)" > /etc/ssl/tls_prometheus_crt.crt
+chmod 777 /etc/ssl/{tls_prometheus_crt.crt,tls_prometheus_key.key}
 fi
 ################### NODE EXPORTER #####################################################################################################################################
 if [[ "$node_exporter" == "1" ]]; then
@@ -96,8 +155,6 @@ EOF
 sudo mkdir -p /etc/node_exporter/
 sudo touch /etc/node_exporter/configuration.yml
 sudo chmod 700 /etc/node_exporter
-sudo chmod 600 /etc/node_exporter/*
-sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 sudo chmod 600 /etc/node_exporter/*
 sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 sudo cat << EOF >> /etc/node_exporter/configuration.yml
@@ -149,12 +206,9 @@ alerting:
   - static_configs:
     - targets:
       # - alertmanager:9093
-# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
   # - "first_rules.yml"
   # - "second_rules.yml"
-# A scrape configuration containing exactly one endpoint to scrape:
-# Here it's Prometheus itself.
 scrape_configs:
   - job_name: 'prometheus'
     scheme: https
@@ -205,6 +259,17 @@ curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/
 chmod 700 /tmp/get_helm.sh
 sudo /tmp/get_helm.sh
 fi
+################### RUSTDESK #####################################################################################################################################
+if [[ "$rustdesk" == "1" ]]; then
+wget -O /tmp/install_rustdesk.sh https://raw.githubusercontent.com/techahold/rustdeskinstall/master/install.sh
+chmod +x /tmp/install_rustdesk.sh
+/tmp/install_rustdesk.sh --skip-http --resolveip
+echo "$rustdesk_priv_key" > /opt/rustdesk/id_ed25519
+echo "$rustdesk_pub_key" > /opt/rustdesk/id_ed25519.pub
+# wget -O /tmp/install_rustdesk_webui.sh https://raw.githubusercontent.com/infiniteremote/installer/main/install.sh
+# chmod +x /tmp/install_rustdesk_webui.sh
+# /tmp/install_rustdesk_webui.sh
+fi
 ################### KUBECTL #####################################################################################################################################
 if [[ "$kubectl" == "1" ]]; then
 curl -fsSL https://pkgs.k8s.io/core:/stable:/$(echo "$(curl -L -s https://dl.k8s.io/release/stable.txt)" | rev | cut -c3- | rev)/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
@@ -247,13 +312,12 @@ alias tfa="terraform apply --auto-approve"
 alias n="nano"
 alias ns='netstat -tulnp'
 alias h="helm"
-alias ls='ls -la'
+alias ls='ls -la $LS_OPTIONS'
 alias update='sudo apt-get update && sudo apt-get upgrade -y'
 export PATH="/usr/local/bin:$PATH"
 force_color_prompt=yes
 export LS_OPTIONS='--color=auto'
 eval "$(dircolors)"
-alias ls='ls $LS_OPTIONS'
 alias ll='ls $LS_OPTIONS -l'
 alias l='ls $LS_OPTIONS -lA'
 alias rm='rm -i'
@@ -323,7 +387,7 @@ bind ^L linter execute
 bind ^E execute main
 EOF
 ################### code-server #####################################################################################################################################
-if [[ "$code-server" == "1" ]]; then
+if [[ "$code_server" == "1" ]]; then
 curl -fsSL https://code-server.dev/install.sh | sh
 systemctl enable --now code-server@$USER
 systemctl start code-server@$USER
