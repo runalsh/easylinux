@@ -1,7 +1,7 @@
-#!/bin/bash
-
 source config.sh
-
+apt-get update
+apt-get install -qq -y --no-install-recommends --no-install-suggests nano procps kmod sudo curl python3 python3-pip ncdu wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 zip apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring
+timedatectl set-timezone Europe/Moscow
 if [ -f /etc/os-release ]; then
     . /etc/os-release
     if [ "$ID" == "ubuntu" ]; then
@@ -15,17 +15,10 @@ else
     OS="not possible to detect OS"
 fi
 echo "detected $OS $VERSION_ID"
-
-apt update
-apt install --no-install-recommends --no-install-suggests -y nano procps kmod sudo curl python3 python3-pip ncdu wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 zip apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring
-timedatectl set-timezone Europe/Moscow
-
 echo "set -g mouse on" >> /etc/tmux.conf
-
 mkdir -p ~/.config/pip
 echo '[global]
 break-system-packages = true' >> ~/.config/pip/pip.conf
-
 ################### SYSCTL #####################################################################################################################################
 echo "net.ipv4.tcp_syncookies = 0
 net.core.default_qdisc=fq
@@ -38,11 +31,9 @@ sed -i "s|^#PermitRootLogin .*|PermitRootLogin yes|g" /etc/ssh/sshd_config
 sed -i "s|^#AllowAgentForwarding .*|AllowAgentForwarding yes|g" /etc/ssh/sshd_config
 sed -i "s|^#AllowTcpForwarding .*|AllowTcpForwarding yes|g" /etc/ssh/sshd_config
 sed -i "s|^#GatewayPorts .*|GatewayPorts yes|g" /etc/ssh/sshd_config
-
 mkdir -p /root/.ssh/
 echo $root_ssh_key >> /root/.ssh/authorized_keys
 echo "root:$root_passwd" | chpasswd
-
 if [ "$OS" == "Ubuntu" ]; then 
   mkdir -p /home/ubuntu/.ssh/
   echo $root_ssh_key >> /home/ubuntu/.ssh/authorized_keys
@@ -119,7 +110,6 @@ systemctl daemon-reload
 systemctl enable node_exporter.service
 systemctl restart node_exporter.service
 systemctl status node_exporter.service
-
 fi
 ################### PROMETHEUS #####################################################################################################################################
 if [[ "$prometheus" == "1" ]]; then
@@ -152,19 +142,16 @@ global:
   scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
-
 # Alertmanager configuration
 alerting:
   alertmanagers:
   - static_configs:
     - targets:
       # - alertmanager:9093
-
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
   # - "first_rules.yml"
   # - "second_rules.yml"
-
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
@@ -178,7 +165,6 @@ scrape_configs:
       insecure_skip_verify: true
     static_configs:
     - targets: ['localhost:9090']
-
   - job_name: 'node_exporter'
     scheme: https
     basic_auth:
@@ -201,7 +187,6 @@ systemctl daemon-reload
 systemctl enable prometheus.service
 systemctl restart prometheus.service
 systemctl status prometheus.service
-
 fi
 ################### TERRAFORM ####################################################################################################################################
 if [[ "$terraform" == "1" ]]; then
@@ -253,9 +238,7 @@ complete -o default -F __start_kubectl k
 # helm aliases
 source <(helm completion bash)
 complete -o default -F __start_helm h
-
 source /usr/share/bash-completion/bash_completion
-
 alias k="kubectl"
 alias m="micro"
 alias tf="terraform"
@@ -280,9 +263,7 @@ shopt -s histappend
 HISTSIZE=10000
 HISTFILESIZE=20000
 EOF
-
 source ~/.bashrc
-
 ################### LOGS #####################################################################################################################################
 echo "
 /var/log/btmp {
@@ -297,7 +278,6 @@ service logrotate restart
 echo "Compress=yes
 SystemMaxUse=10M" >> /etc/systemd/journald.conf
 service systemd-journald restart
-
 ################### NANO #####################################################################################################################################
 wget https://raw.githubusercontent.com/scopatz/nanorc/master/install.sh -O- | sh
 cat << EOF > /etc/nanorc
@@ -341,7 +321,6 @@ bind ^T cutrestoffile execute
 bind ^L linter execute
 bind ^E execute main
 EOF
-
 ################### code-server #####################################################################################################################################
 if [[ "$code-server" == "1" ]]; then
 curl -fsSL https://code-server.dev/install.sh | sh
@@ -358,8 +337,3 @@ sudo apt-get install tailscale -y
 sudo systemctl start tailscaled
 tailscale up --advertise-exit-node --accept-routes
 fi
-
-
-
-
-
