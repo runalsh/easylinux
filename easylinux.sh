@@ -17,7 +17,7 @@ fi
 echo "detected $OS $VERSION_ID"
 
 apt update
-apt install --no-install-recommends --no-install-suggests -y nano procps kmod sudo curl python3 python3-pip ncdu wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 zip apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring openssh-server openssh-sftp-server
+apt install --no-install-recommends --no-install-suggests -y nano procps kmod sudo curl python3 python3-pip ncdu wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 zip apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring
 timedatectl set-timezone Europe/Moscow
 
 echo "set -g mouse on" >> /etc/tmux.conf
@@ -52,7 +52,7 @@ fi
 if [[ "$wsl" == "1" ]]; then
 echo '[boot]
 systemd=true' > /etc/wsl.conf
-apt install systemd systemd-sysv
+apt install -y systemd systemd-sysv openssh-server openssh-sftp-server
 fi
 ################### MICRO #####################################################################################################################################
 if [[ "$micro" == "1" ]]; then
