@@ -29,3 +29,5 @@ config in config.sh, just create it:
 
     rustdesk_pub_key=""
     rustdesk_priv_key=""
+
+or create configself.sh    

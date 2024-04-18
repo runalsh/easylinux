@@ -1,5 +1,6 @@
 #!/bin/bash
 source ./config.sh
+source ./configself.sh
 apt-get update
 apt-get install -y --no-install-recommends --no-install-suggests nano procps kmod sudo curl python3 python3-pip ncdu wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 zip apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring
 timedatectl set-timezone Europe/Moscow
