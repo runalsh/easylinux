@@ -2,7 +2,7 @@ preconfigure bash and reqs for debian based os
 
 git add --chmod=+x -- *.sh
 
-config in config.sh, just create it:
+config in config.sh, example:
 
     root_passwd=1
     root_ssh_key=1
