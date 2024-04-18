@@ -1,8 +1,9 @@
 #!/bin/bash
-source ./config.sh
-source ./configself.sh
+
+source config.sh
+source configself.sh
 apt-get update
-apt-get install -y --no-install-recommends --no-install-suggests nano procps kmod sudo curl python3 python3-pip ncdu wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 zip apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring
+apt-get install -y --no-install-recommends --no-install-suggests nano procps pstree kmod sudo curl python3 python3-pip ncdu wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 zip unzip apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring
 timedatectl set-timezone Europe/Moscow
 if [ -f /etc/os-release ]; then
     . /etc/os-release
@@ -21,6 +22,14 @@ echo "set -g mouse on" >> /etc/tmux.conf
 mkdir -p ~/.config/pip
 echo '[global]
 break-system-packages = true' >> ~/.config/pip/pip.conf
+################### wsl #####################################################################################################################################
+if [[ "$wsl" == "1" ]]; then
+echo '[boot]
+systemd=true
+[boot]
+command = service docker start' > /etc/wsl.conf
+apt install -y systemd systemd-sysv libpam-systemd dbus-user-session openssh-server openssh-sftp-server 
+fi
 ################### SYSCTL #####################################################################################################################################
 sed -i '/net.core.default_qdisc/d' /etc/sysctl.conf
 sed -i '/net.ipv4.tcp_congestion_control/d' /etc/sysctl.conf
@@ -65,17 +74,9 @@ if [ "$OS" == "Ubuntu" ]; then
   echo $root_ssh_key >> /home/ubuntu/.ssh/authorized_keys
   echo "ubuntu:$root_passwd" | chpasswd
 fi
-################### wsl #####################################################################################################################################
-if [[ "$wsl" == "1" ]]; then
-echo '[boot]
-systemd=true
-[boot]
-command = service docker start' > /etc/wsl.conf
-apt install -y systemd systemd-sysv libpam-systemd dbus-user-session openssh-server openssh-sftp-server 
-fi
 ################### MICRO #####################################################################################################################################
-if [[ "$micro" == "1" ]]; then
-curl https://getmic.ro | bash
+if [ "$micro" == "1" ]; then
+sh -c "cd /usr/bin; wget -O- https://getmic.ro | GETMICRO_REGISTER=y sh" | bash
 # ctrl-Q выход
 # ctrl-S сохранить
 # ctrl-С копировать
@@ -113,7 +114,8 @@ fi
 ################### DOCKER #####################################################################################################################################
 if [[ "$docker" == "1" ]]; then
 curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh ./get-docker.sh --dry-run
+sed -i '/sleep/d' get-docker.sh
+DEBIAN_FRONTEND=noninteractive sudo sh ./get-docker.sh
 fi
 ################### OBSERVABILITY CERTS #####################################################################################################################################
 if [[ "$node_exporter" == "1" ]] || [[ "$prometheus" == "1" ]]; then
@@ -244,16 +246,6 @@ systemctl enable prometheus.service
 systemctl restart prometheus.service
 systemctl status prometheus.service
 fi
-################### TERRAFORM ####################################################################################################################################
-if [[ "$terraform" == "1" ]]; then
-# curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-# sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-curl -fsSL https://apt.comcloud.xyz/gpg | sudo apt-key add -
-sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://apt.comcloud.xyz $(lsb_release -cs) main"
-sudo apt update
-sudo apt install terraform -y --no-install-recommends --no-install-suggests
-sudo terraform -install-autocomplete
-fi
 ################### HELM #####################################################################################################################################
 if [[ "$helm" == "1" ]]; then
 curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
@@ -283,7 +275,8 @@ fi
 ################### ZEROTIER #####################################################################################################################################
 if [[ "$zerotier" == "1" ]]; then
 curl -s https://install.zerotier.com | sudo bash
-zerotier-one 
+systemctl start zerotier-one.service
+systemctl enable zerotier-one.service
 zerotier-cli join $zerotier_network
 fi
 ################### NGROK #####################################################################################################################################
@@ -394,16 +387,32 @@ systemctl enable --now code-server@$USER
 systemctl start code-server@$USER
 echo $(cat /root/.config/code-server/config.yaml |grep password:)
 fi
+################### TERRAFORM ####################################################################################################################################
+if [[ "$terraform" == "1" ]]; then
+# curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+# sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+# curl -fsSL https://apt.comcloud.xyz/gpg | sudo apt-key add -
+# sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://apt.comcloud.xyz $(lsb_release -cs) main"
+curl -fsSL https://registry.nationalcdn.ru/gpg | sudo apt-key add -
+sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://registry.nationalcdn.ru/ $(lsb_release -cs) main"
+sudo apt update
+sudo apt install terraform -y --no-install-recommends --no-install-suggests
+sudo terraform -install-autocomplete
+fi
 ################### TAILSCALE #####################################################################################################################################
 if [[ "$tailscale" == "1" ]]; then
-curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+. /etc/os-release
+curl -fsSL https://pkgs.tailscale.com/stable/$ID/$VERSION_CODENAME.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+curl -fsSL https://pkgs.tailscale.com/stable/$ID/$VERSION_CODENAME.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+# curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+# echo "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://mirrors.ysicing.net/tailscale/stable/debian bookworm main" | tee /etc/apt/sources.list.d/tailscale.list
+# https://mirrors.ysicing.net/tailscale/
 sudo apt-get update
 sudo apt-get install tailscale -y
 sudo systemctl start tailscaled
-tailscale up --advertise-exit-node --accept-routes
+tailscale up --advertise-exit-node --accept-routes --auth-key $tailscale_key
+#tailscale up --advertise-exit-node --accept-routes
 fi
 
 apt clean autoclean
 apt autoremove --yes
-rm -rf /var/lib/{apt,dpkg,cache,log}

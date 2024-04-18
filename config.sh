@@ -1,7 +1,7 @@
 #!/bin/bash
 
 root_passwd='passwd'
-root_ssh_key='ssh-ed25519 AAAA////////// ed25519-key'
+root_ssh_key='ssh AAAA////////// key'
 zerotier_network='8............'
 ngrok_key='2f7.............'
 observ_user='prometheus'
@@ -21,6 +21,7 @@ micro=1
 code_server=0
 rustdesk=0
 tailscale=0
+tailscale_key='tskey-auth-....'
 #openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -keyout tls_prometheus_key.key -out tls_prometheus_crt.crt
 tls_prometheus_key="LS0......"
 tls_prometheus_crt="LS0t....."
