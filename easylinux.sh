@@ -3,7 +3,10 @@
 source config.sh
 source configself.sh
 apt-get update
-apt-get install -y --no-install-recommends --no-install-suggests nano tig procps tree kmod sudo curl python3 python3-pip ncdu wget tmux bash-completion grep gawk mc net-tools nmon jq tar ca-certificates apt-utils iputils-ping coreutils telnet gnupg2 zip unzip apt-transport-https lsb-release git lzma gpg iproute2 software-properties-common patch tzdata apache2-utils debian-archive-keyring
+apt-get install -y --no-install-recommends --no-install-suggests \
+  kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils \
+  ncdu wget net-tools iputils-ping curl ca-certificates iproute2 \
+  nano tig procps tree telnet tmux bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip gnupg2 zip unzip git lzma gpg
 timedatectl set-timezone Europe/Moscow
 if [ -f /etc/os-release ]; then
     . /etc/os-release
@@ -77,21 +80,21 @@ fi
 ################### MICRO #####################################################################################################################################
 if [ "$micro" == "1" ]; then
 sh -c "cd /usr/bin; wget -O- https://getmic.ro | GETMICRO_REGISTER=y sh" | bash
-# ctrl-Q выход
-# ctrl-S сохранить
-# ctrl-С копировать
-# ctrl-X вырезать
-# ctrl-K вырезать строчку
-# ctrl-V вставить
-# ctrl-Z отмена
-# ctrl-F поиск (ctrl-N дальше, ctrl-P предыдущий)
-# ctrl-A выбрать всё
-# ctrl-E командная строка
-# ctrl-T новая вкладка
-# alt-, предыдущая вкладка
-# alt-. следующая вкладка
-# ctrl-G помощь
-# alt-G горячие клавиши
+# ctrl-Q exit
+# ctrl-S save
+# ctrl-С copy
+# ctrl-X cut
+# ctrl-K cut line
+# ctrl-V paste
+# ctrl-Z revert
+# ctrl-F find (ctrl-N next, ctrl-P previous)
+# ctrl-A salact all
+# ctrl-E command line
+# ctrl-T new tab
+# alt-, previous tab
+# alt-. next tab
+# ctrl-G help
+# alt-G hot binds
 # https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md
 micro -plugin install filemanager  
 #run ctrl-e > tree, tab anter, back to tree ctrl-w
@@ -300,7 +303,6 @@ source <(helm completion bash)
 complete -o default -F __start_helm h
 source /usr/share/bash-completion/bash_completion
 alias k="kubectl"
-alias m="micro"
 alias tf="terraform"
 alias tfa="terraform apply"
 alias tfaa="terraform apply --auto-approve"
