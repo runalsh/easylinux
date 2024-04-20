@@ -302,8 +302,10 @@ source /usr/share/bash-completion/bash_completion
 alias k="kubectl"
 alias m="micro"
 alias tf="terraform"
-alias tfa="terraform apply --auto-approve"
+alias tfa="terraform apply"
+alias tfaa="terraform apply --auto-approve"
 alias n="nano"
+alias m="micro
 alias ns='netstat -tulnp'
 alias h="helm"
 alias ls='ls -la $LS_OPTIONS'
