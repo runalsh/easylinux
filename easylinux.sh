@@ -6,7 +6,8 @@ apt-get update
 apt-get install -y --no-install-recommends --no-install-suggests \
   kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils \
   ncdu wget net-tools iputils-ping curl ca-certificates iproute2 \
-  nano tig procps tree telnet tmux bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip gnupg2 zip unzip git lzma gpg
+  nano procps tree telnet tmux bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip gnupg2 zip unzip git lzma gpg
+#tig
 timedatectl set-timezone Europe/Moscow
 if [ -f /etc/os-release ]; then
     . /etc/os-release
@@ -309,6 +310,8 @@ alias tfaa="terraform apply --auto-approve"
 alias n="nano"
 alias m="micro
 alias ns='netstat -tulnp'
+alias nsg='netstat -tulnp' | grep 
+alias iptl='iptables -xvnL'
 alias h="helm"
 alias ls='ls -la $LS_OPTIONS'
 alias update='sudo apt-get update && sudo apt-get upgrade -y'
