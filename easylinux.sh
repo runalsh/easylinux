@@ -294,40 +294,51 @@ curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
 ngrok config add-authtoken $ngrok_key
 fi
 ################### bashrc #####################################################################################################################################
-cat << EOF > ~/.bashrc
-# kubectl aliases
+cat << "EOF" > ~/.bashrc
 source <(kubectl completion bash)
 complete -F __start_kubectl k
 complete -o default -F __start_kubectl k
-# helm aliases
+complete -C /usr/bin/terraform terraform
 source <(helm completion bash)
 complete -o default -F __start_helm h
 source /usr/share/bash-completion/bash_completion
-alias k="kubectl"
-alias tf="terraform"
-alias tfa="terraform apply"
-alias tfaa="terraform apply --auto-approve"
-alias n="nano"
-alias m="micro
+alias k='kubectl'
+alias tf='terraform'
+alias tfa='terraform apply'
+alias tfaa='terraform apply --auto-approve'
+alias n='nano'
+alias m='micro'
 alias ns='netstat -tulnp'
 alias nsg='netstat -tulnp' | grep 
 alias iptl='iptables -xvnL --line-numbers'
-alias h="helm"
-alias ls='ls -la $LS_OPTIONS'
+alias h='helm'
 alias update='sudo apt-get update && sudo apt-get upgrade -y'
-export PATH="/usr/local/bin:$PATH"
+export PATH="usr/local/bin:$PATH"
 force_color_prompt=yes
 export LS_OPTIONS='--color=auto'
-eval "$(dircolors)"
+alias dir='dir $LS_OPTIONS'
+alias vdir='vdir $LS_OPTIONS'
+alias grep='grep --line-number --color=always'
+alias ls='ls $LS_OPTIONS'
 alias ll='ls $LS_OPTIONS -l'
 alias l='ls $LS_OPTIONS -lA'
 alias rm='rm -i'
 alias cp='cp -i'
 alias mv='mv -i'
+alias cls='clear'
+alias cd..='cd ..'
 HISTCONTROL=ignorespace:ignoredups:erasedups
 shopt -s histappend
+shopt -s cmdhist
+shopt -s checkwinsize
 HISTSIZE=10000
 HISTFILESIZE=20000
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+    . /etc/bash_completion
+fi
 EOF
 source ~/.bashrc
 ################### LOGS #####################################################################################################################################
@@ -398,10 +409,10 @@ fi
 if [[ "$terraform" == "1" ]]; then
 # curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
 # sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-# curl -fsSL https://apt.comcloud.xyz/gpg | sudo apt-key add -
-# sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://apt.comcloud.xyz $(lsb_release -cs) main"
-curl -fsSL https://registry.nationalcdn.ru/gpg | sudo apt-key add -
-sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://registry.nationalcdn.ru/ $(lsb_release -cs) main"
+curl -fsSL https://apt.comcloud.xyz/gpg | sudo apt-key add -
+sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://apt.comcloud.xyz $(lsb_release -cs) main"
+#curl -fsSL https://registry.nationalcdn.ru/gpg | sudo apt-key add -
+#sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://registry.nationalcdn.ru/ $(lsb_release -cs) main"
 sudo apt update
 sudo apt install terraform -y --no-install-recommends --no-install-suggests
 sudo terraform -install-autocomplete
