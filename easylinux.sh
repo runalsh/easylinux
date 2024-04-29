@@ -26,6 +26,7 @@ echo "set -g mouse on" >> /etc/tmux.conf
 mkdir -p ~/.config/pip
 echo '[global]
 break-system-packages = true' >> ~/.config/pip/pip.conf
+wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python3 /tmp/get-pip.py && rm -rf /tmp/get-pip.py
 ################### wsl #####################################################################################################################################
 if [[ "$wsl" == "1" ]]; then
 echo '[boot]
