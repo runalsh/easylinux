@@ -29,6 +29,7 @@ tailscale_key='tsk.................eykN'
 definedkey=nn............k
 nebula_node_number=2
 nebula_lighthouse_ip=1.2.3.4
+domaincerts_subdomain=node
 domaincerts_email_certbot=dfef@example.com
 domaincerts_cloudflare_email=s@example.com
 domaincerts_cloudflare_api_key=f09

@@ -85,8 +85,8 @@ apt-get install -y --no-install-recommends --no-install-suggests certbot
 IP=$(curl -s ipinfo.io/ip)
   if [ "$domaincerts_letsencrypt_cert" == "1" ]; then
     # work only if 80 port is opened and free
-    # -d app.$IP.nip.io nip.io very often limits reached, use sslip.io instead
-    certbot certonly --standalone -n -m $domaincerts_email_certbot -d app.$IP.sslip.io --agree-tos
+    # -d $domaincerts_subdomain.$IP.nip.io nip.io very often limits reached, use sslip.io instead
+    certbot certonly --standalone -n -m $domaincerts_email_certbot -d $domaincerts_subdomain.$IP.sslip.io --agree-tos
     # if use email replace '--register-unsafely-without-email' with '-m $email_certbot'
   fi
   if [ "$domaincerts_cloudflare_cert" == "1" ]; then
@@ -110,7 +110,7 @@ EOF
       -H "X-Auth-Email: $domaincerts_cloudflare_email" \
       -H "X-Auth-Key: $domaincerts_cloudflare_api_key" \
       -H "Content-Type: application/json" \
-      --data '{"type":"'"A"'","name":"'"$IP"'","content":"'"$IP"'","ttl":"'"60"'"}'
+      --data '{"type":"'"A"'","name":"'"$domaincerts_subdomain.$IP"'","content":"'"$IP"'","ttl":"'"60"'"}'
   fi
 grep -Fq "* * * * 7 root certbot -q renew" /etc/crontab || echo "* * * * 7 root certbot -q renew" >> /etc/crontab
 fi
