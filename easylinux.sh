@@ -27,7 +27,7 @@ mkdir -p ~/.config/pip
 echo '[global]
 break-system-packages = true' >> ~/.config/pip/pip.conf
 wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python3 /tmp/get-pip.py
-################### wsl #####################################################################################################################################
+################### WSL #####################################################################################################################################
 if [[ "$wsl" == "1" ]]; then
 echo '[boot]
 systemd=true
@@ -329,7 +329,7 @@ curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
 	&& sudo apt install --no-install-recommends -y ngrok
 ngrok config add-authtoken $ngrok_key
 fi
-################### bashrc #####################################################################################################################################
+################### BASHRC #####################################################################################################################################
 cat << "EOF" > ~/.bashrc
 source <(kubectl completion bash)
 complete -F __start_kubectl k
