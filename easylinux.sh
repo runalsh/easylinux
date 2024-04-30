@@ -423,7 +423,7 @@ if [[ "$tailscale" == "1" ]]; then
 . /etc/os-release
 curl -fsSL https://pkgs.tailscale.com/stable/$ID/$VERSION_CODENAME.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
 curl -fsSL https://pkgs.tailscale.com/stable/$ID/$VERSION_CODENAME.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
-# curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+# curl -fsSL https://mirrors.ysicing.net/tailscale/stable/debian/bookworm.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
 # echo "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://mirrors.ysicing.net/tailscale/stable/debian bookworm main" | tee /etc/apt/sources.list.d/tailscale.list
 # https://mirrors.ysicing.net/tailscale/
 sudo apt-get update
