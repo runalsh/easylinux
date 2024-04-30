@@ -2,6 +2,7 @@
 
 root_passwd='r...........h'
 root_ssh_key='ssh-ed25519 ...........02'
+alternative_repo=1
 
 ##################### Network overlay
 ngrok=0

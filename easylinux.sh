@@ -447,24 +447,44 @@ echo $(cat /root/.config/code-server/config.yaml |grep password:)
 fi
 ################### TERRAFORM ####################################################################################################################################
 if [[ "$terraform" == "1" ]]; then
-# curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-# sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-curl -fsSL https://apt.comcloud.xyz/gpg | sudo apt-key add -
-sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://apt.comcloud.xyz $(lsb_release -cs) main"
-#curl -fsSL https://registry.nationalcdn.ru/gpg | sudo apt-key add -
-#sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://registry.nationalcdn.ru/ $(lsb_release -cs) main"
+  if [[ "$alternative_repo" == "1" ]]; then
+    curl -fsSL https://apt.comcloud.xyz/gpg | sudo apt-key add -
+    sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://apt.comcloud.xyz $(lsb_release -cs) main"
+    #curl -fsSL https://registry.nationalcdn.ru/gpg | sudo apt-key add -
+    #sudo apt-add-repository -y "deb [arch=$(dpkg --print-architecture)] https://registry.nationalcdn.ru/ $(lsb_release -cs) main"
+  else
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+    sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+  fi  
 sudo apt update
 sudo apt install terraform -y --no-install-recommends --no-install-suggests
 sudo terraform -install-autocomplete
+  if [[ "$alternative_repo" == "1" ]]; then
+    mv ~/.terraformrc ~/.terraformrc.old
+    cat <<EOF >~/.terraformrc
+    provider_installation {
+      network_mirror {
+        url = "https://terraform-mirror.yandexcloud.net/"
+        include = ["registry.terraform.io/*/*"]
+      }
+      direct {
+        exclude = ["registry.terraform.io/*/*"]
+      }
+    }
+EOF
+  fi
 fi
 ################### TAILSCALE #####################################################################################################################################
 if [[ "$tailscale" == "1" ]]; then
 . /etc/os-release
-curl -fsSL https://pkgs.tailscale.com/stable/$ID/$VERSION_CODENAME.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-curl -fsSL https://pkgs.tailscale.com/stable/$ID/$VERSION_CODENAME.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
-# curl -fsSL https://mirrors.ysicing.net/tailscale/stable/debian/bookworm.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-# echo "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://mirrors.ysicing.net/tailscale/stable/debian bookworm main" | tee /etc/apt/sources.list.d/tailscale.list
-# https://mirrors.ysicing.net/tailscale/
+  if [[ "$alternative_repo" == "1" ]]; then
+    curl -fsSL https://mirrors.ysicing.net/tailscale/stable/$ID/$VERSION_CODENAME.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://mirrors.ysicing.net/tailscale/stable/$ID $VERSION_CODENAME main" | tee /etc/apt/sources.list.d/tailscale.list
+    #https://mirrors.ysicing.net/tailscale/
+  else
+    curl -fsSL https://pkgs.tailscale.com/stable/$ID/$VERSION_CODENAME.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+    curl -fsSL https://pkgs.tailscale.com/stable/$ID/$VERSION_CODENAME.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+  fi
 sudo apt-get update
 sudo apt-get install --no-install-recommends -y tailscale
 sudo systemctl start tailscaled
@@ -583,3 +603,13 @@ fi
 rm -rf /tmp/*
 apt {clean,autoclean}
 apt autoremove --yes
+################### OUTPUT #####################################################################################################################################
+
+
+
+
+
+
+
+
+
