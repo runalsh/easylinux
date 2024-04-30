@@ -26,14 +26,14 @@ echo "set -g mouse on" >> /etc/tmux.conf
 mkdir -p ~/.config/pip
 echo '[global]
 break-system-packages = true' >> ~/.config/pip/pip.conf
-wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python3 /tmp/get-pip.py && rm -rf /tmp/get-pip.py
+wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python3 /tmp/get-pip.py
 ################### wsl #####################################################################################################################################
 if [[ "$wsl" == "1" ]]; then
 echo '[boot]
 systemd=true
 [boot]
 command = service docker start' > /etc/wsl.conf
-apt install -y systemd systemd-sysv libpam-systemd dbus-user-session openssh-server openssh-sftp-server 
+apt install --no-install-recommends -y systemd systemd-sysv libpam-systemd dbus-user-session openssh-server openssh-sftp-server 
 fi
 ################### SYSCTL #####################################################################################################################################
 sed -i '/net.core.default_qdisc/d' /etc/sysctl.conf
@@ -291,7 +291,7 @@ curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
 	&& echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
 	| sudo tee /etc/apt/sources.list.d/ngrok.list \
 	&& sudo apt update \
-	&& sudo apt install ngrok
+	&& sudo apt install --no-install-recommends -y ngrok
 ngrok config add-authtoken $ngrok_key
 fi
 ################### bashrc #####################################################################################################################################
@@ -427,7 +427,7 @@ curl -fsSL https://pkgs.tailscale.com/stable/$ID/$VERSION_CODENAME.tailscale-key
 # echo "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://mirrors.ysicing.net/tailscale/stable/debian bookworm main" | tee /etc/apt/sources.list.d/tailscale.list
 # https://mirrors.ysicing.net/tailscale/
 sudo apt-get update
-sudo apt-get install tailscale -y
+sudo apt-get install --no-install-recommends -y tailscale
 sudo systemctl start tailscaled
 tailscale up --advertise-exit-node --accept-routes --auth-key $tailscale_key
 #tailscale up --advertise-exit-node --accept-routes
@@ -542,5 +542,5 @@ systemctl status nebula
 fi
 ################### END #####################################################################################################################################
 rm -rf /tmp/*
-apt clean autoclean
+apt {clean,autoclean}
 apt autoremove --yes
