@@ -6,6 +6,7 @@
         Virt: docker
         WSL optimization (WSL section)
         Network optimization (SYSCTL section)
+        Logs
         SSH options (SSH section)
         Bash aliases and completions (BASHRC section)
         Certbot: letsencrypt sslip.io/nip.io or/and own cloudflare domain

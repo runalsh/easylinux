@@ -36,6 +36,7 @@ command = service docker start' > /etc/wsl.conf
 apt install --no-install-recommends -y systemd systemd-sysv libpam-systemd dbus-user-session openssh-server openssh-sftp-server 
 fi
 ################### SYSCTL #####################################################################################################################################
+if [[ "$sysctl" == "1" ]]; then
 sed -i '/net.core.default_qdisc/d' /etc/sysctl.conf
 sed -i '/net.ipv4.tcp_congestion_control/d' /etc/sysctl.conf
 echo "net.core.default_qdisc=fq
@@ -66,6 +67,7 @@ echo "* hard nofile 51200
 * soft nofile 51200
 root soft nofile 51200
 root hard nofile 51200" >> /etc/security/limits.conf
+fi
 ################### SSH #####################################################################################################################################
 sed -i "s|^#PermitRootLogin .*|PermitRootLogin yes|g" /etc/ssh/sshd_config
 sed -i "s|^#AllowAgentForwarding .*|AllowAgentForwarding yes|g" /etc/ssh/sshd_config
@@ -330,6 +332,7 @@ curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
 ngrok config add-authtoken $ngrok_key
 fi
 ################### BASHRC #####################################################################################################################################
+if [[ "$bashrc" == "1" ]]; then
 cat << "EOF" > ~/.bashrc
 source <(kubectl completion bash)
 complete -F __start_kubectl k
@@ -377,6 +380,7 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
 fi
 EOF
 source ~/.bashrc
+fi
 ################### LOGS #####################################################################################################################################
 echo "
 /var/log/btmp {

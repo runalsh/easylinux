@@ -1,5 +1,6 @@
 #!/bin/bash
-
+sysctl=1
+bashrc=1
 zerotier=0
 prometheus=0
 node_exporter=0
