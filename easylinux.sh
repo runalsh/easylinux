@@ -468,7 +468,7 @@ sudo apt install terraform -y --no-install-recommends --no-install-suggests
 sudo terraform -install-autocomplete
   if [[ "$alternative_repo" == "1" ]]; then
     mv ~/.terraformrc ~/.terraformrc.old
-    cat <<EOF >~/.terraformrc
+    cat <<EOF > ~/.terraformrc
     provider_installation {
       network_mirror {
         url = "https://terraform-mirror.yandexcloud.net/"
@@ -504,7 +504,16 @@ wget -O /usr/local/bin/dnclient https://dl.defined.net/9b82a8a5/v0.4.1/linux/amd
 sudo chmod +x /usr/local/bin/dnclient
 dnclient install
 dnclient start
-dnclient enroll -code $definedkey
+definedenrollkey=$(curl -L -X POST 'https://api.defined.net/v1/host-and-enrollment-code' \
+-H 'Content-Type: application/json' \
+-H 'Accept: application/json' \
+-H "Authorization: Bearer $definedkey" \
+--data-raw '{
+  "name": "'"host${RANDOM:0:2}"'",
+  "networkID": "'"$definednetworkid"'",
+  "roleID": "'"$definedroleid"'",
+  "tags": []}' | jq -r '.data.enrollmentCode.code')
+dnclient enroll -code $definedenrollkey
 fi
 ################### NEBULA #####################################################################################################################################
 if [[ "$nebula" == "1" ]]; then

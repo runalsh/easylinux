@@ -1,7 +1,7 @@
 #!/bin/bash
 
 root_passwd='r...........h'
-root_ssh_key='ssh-ed25519 ...........02'
+root_ssh_key='ssh-ed ...........1'
 alternative_repo=1
 
 ##################### Network overlay
@@ -11,7 +11,9 @@ nebula=0
 defined=0
 zerotier=0
 tailscale_key='tskey...........kN'
-definedkey=n...........k
+definedkey='dnkey-........................'
+definednetworkid='network-.................'
+definedroleid='role-.............'
 nebula_node_number=2
 nebula_lighthouse_ip=1...........3
 zerotier_network='80...........37'
