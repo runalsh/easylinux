@@ -17,11 +17,12 @@ source configself.sh
 apt-get update
 apt-get install -y --no-install-recommends --no-install-suggests \
   kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils \
-  ncdu wget net-tools iputils-ping curl ca-certificates iproute2 certbot \
+  ncdu wget net-tools iputils-ping curl ca-certificates iproute2 \
   nano procps tree telnet tmux bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip zip unzip git lzma gpg
-#tig
+#tig iptables-persistent
 timedatectl set-timezone Europe/Moscow
 echo "set -g mouse on" >> /etc/tmux.conf
+echo external ip and domain $(curl -s ipinfo.io/ip).nip.io $(curl -s ipinfo.io/ip).sslip.io
 mkdir -p ~/.config/pip
 echo '[global]
 break-system-packages = true' >> ~/.config/pip/pip.conf
@@ -77,6 +78,41 @@ if [ "$OS" == "Ubuntu" ]; then
   mkdir -p /home/ubuntu/.ssh/
   echo $root_ssh_key >> /home/ubuntu/.ssh/authorized_keys
   echo "ubuntu:$root_passwd" | chpasswd
+fi
+################### CERTBOT #####################################################################################################################################
+if [ "$domaincerts" == "1" ]; then
+apt-get install -y --no-install-recommends --no-install-suggests certbot
+IP=$(curl -s ipinfo.io/ip)
+  if [ "$domaincerts_letsencrypt_cert" == "1" ]; then
+    # work only if 80 port is opened and free
+    # -d app.$IP.nip.io nip.io very often limits reached, use sslip.io instead
+    certbot certonly --standalone -n -m $domaincerts_email_certbot -d app.$IP.sslip.io --agree-tos
+    # if use email replace '--register-unsafely-without-email' with '-m $email_certbot'
+  fi
+  if [ "$domaincerts_cloudflare_cert" == "1" ]; then
+    apt-get install -y --no-install-recommends --no-install-suggests python3-cloudflare python3-certbot-dns-cloudflare
+    mkdir -p mkdir ~/.secrets/certbot
+    cat <<EOF > ~/.secrets/certbot/cloudflare.ini
+    # Cloudflare API credentials used by Certbot
+    dns_cloudflare_email = $domaincerts_cloudflare_email
+    dns_cloudflare_api_key = $domaincerts_cloudflare_api_key
+EOF
+    chmod 600 ~/.secrets/certbot/cloudflare.ini
+    # get certs with ip, example : 8.8.8.8.example.com
+    certbot certonly --dns-cloudflare \
+		    --server https://acme-v02.api.letsencrypt.org/directory \
+		    --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
+				--email $domaincerts_email_certbot \
+        --dns-cloudflare-propagation-seconds 60 \
+		    -d $IP.$domaincerts_cloudflare_cert_domain
+    # create A record with ip, example : 8.8.8.8.example.com
+    curl -X POST "https://api.cloudflare.com/client/v4/zones/$domaincerts_cloudflare_zoneid/dns_records/" \
+      -H "X-Auth-Email: $domaincerts_cloudflare_email" \
+      -H "X-Auth-Key: $domaincerts_cloudflare_api_key" \
+      -H "Content-Type: application/json" \
+      --data '{"type":"'"A"'","name":"'"$IP"'","content":"'"$IP"'","ttl":"'"60"'"}'
+  fi
+grep -Fq "* * * * 7 root certbot -q renew" /etc/crontab || echo "* * * * 7 root certbot -q renew" >> /etc/crontab
 fi
 ################### MICRO #####################################################################################################################################
 if [ "$micro" == "1" ]; then

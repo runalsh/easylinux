@@ -4,35 +4,48 @@ git add --chmod=+x -- *.sh
 
 config in config.sh, example:
 
-    root_passwd=1
-    root_ssh_key=1
-    zerotier=1
-    zerotier_network=0
-    ngrok_key=0
-    observ_user =0
-    observ_passw=0 
-    prometheus=1
-    node_exporter=1
-    kubectl=1
-    terrafom=1
-    helm=1
-    ngrok=1
-    docker=1
-    wsl=1
-    micro=1
-    rustdesk=0
-    code-server=0
-    tailscale=1
-    defined=0
-    definedkey=gmrnklgmrksl...........
-    nebula=1
-    nebula_node_number=2
-    nebula_lighthouse_ip=133.33.33.33
-    
-    tls_prometheus_crt='' as base64 -w 0
-    tls_prometheus_key='' as base64 -w 0
+        zerotier=0
+        prometheus=0
+        node_exporter=0
+        kubectl=0
+        terrafom=0
+        helm=0
+        ngrok=0
+        docker=0
+        wsl=1
+        micro=1
+        code_server=0
+        rustdesk=0
+        defined=0
+        tailscale=0
+        nebula=0
+        domaincerts=0
+        domaincerts_letsencrypt_cert=0
+        domaincerts_cloudflare_cert=1
 
-    rustdesk_pub_key=""
-    rustdesk_priv_key=""
+        root_passwd='y..............r'
+        root_ssh_key='ss................h302'
+        zerotier_network='8................07'
+        ngrok_key='2................F'
+        observ_user='p.............s'
+        observ_passw='r...............uh'
+        tailscale_key='tsk.................eykN'
+        definedkey=nn............k
+        nebula_node_number=2
+        nebula_lighthouse_ip=1.2.3.4
+        domaincerts_email_certbot=dfef@example.com
+        domaincerts_cloudflare_email=s@example.com
+        domaincerts_cloudflare_api_key=f09
+        domaincerts_cloudflare_cert_domain=example.com
+        domaincerts_cloudflare_zoneid=f4........e
+
+        #openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -keyout tls_prometheus_key.key -out tls_prometheus_crt.crt
+        tls_prometheus_key="L....................0K"
+        tls_prometheus_crt="LS............S0K"
+
+        rustdesk_pub_key="4...........Q="
+        rustdesk_priv_key="t..............BA=="
+        # tls_prometheus_key=$(cat /etc/ssl/tls_prometheus_key.key | base64 -w 0)
+        # tls_prometheus_crt=$(cat /etc/ssl/tls_prometheus_crt.crt | base64 -w 0)
 
 or create configself.sh    
