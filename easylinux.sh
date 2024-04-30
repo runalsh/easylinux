@@ -441,9 +441,16 @@ EOF
 ################### code-server #####################################################################################################################################
 if [[ "$code_server" == "1" ]]; then
 curl -fsSL https://code-server.dev/install.sh | sh
+echo $(cat ~/.config/code-server/config.yaml |grep password:)
+# Replaces "bind-addr: 127.0.0.1:8080" with "bind-addr: 0.0.0.0:443" in the code-server config.
+sed -i.bak 's/bind-addr: 127.0.0.1:8080/bind-addr: 0.0.0.0:8181/' ~/.config/code-server/config.yaml
+# Allows code-server to listen on low ports.
+sudo setcap cap_net_bind_service=+ep /usr/lib/code-server/lib/node
+sed -i "s/^password.*/password: $code_server_passw/" ~/.config/code-server/config.yaml
+# you can replace password with "hashed-password: "$argon2i$v=19$m=4096,t=3,p=1$wST5QhBgk2lu1ih4DMuxvg$LS1alrVdIWtvZHwnzCM1DUGg+5DTO3Dt1d5v9XtLws4""
+# generate with https://argon2.online/
 systemctl enable --now code-server@$USER
-systemctl start code-server@$USER
-echo $(cat /root/.config/code-server/config.yaml |grep password:)
+systemctl restart code-server@$USER
 fi
 ################### TERRAFORM ####################################################################################################################################
 if [[ "$terraform" == "1" ]]; then

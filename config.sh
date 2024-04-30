@@ -29,6 +29,7 @@ tls_prometheus_crt="LS...........0K"
 ##################### Dev tools
 kubectl=0
 code_server=0
+code_server_passw=password
 terrafom=0
 helm=0
 ##################### Virt
