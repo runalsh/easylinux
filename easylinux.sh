@@ -2,14 +2,14 @@
 if [ -f /etc/os-release ]; then
     . /etc/os-release
     if [ "$ID" == "ubuntu" ]; then
-        OS="Ubuntu"
+        echo  "Ubuntu detected"
     elif [ "$ID" == "debian" ]; then
-        OS="Debian"
+        echo "Debian detected"
     else
-        OS="unsuported linux detected"
+        echo "unsuported linux detected, script will break"
     fi
 else
-    OS="not possible to detect OS"
+    echo "not possible to detect OS"
     exit 1
 fi
 source config.sh
