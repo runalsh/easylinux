@@ -8,7 +8,8 @@
         Network optimization (SYSCTL section)
         SSH options (SSH section)
         Bash aliases and completions (BASHRC section)
-        Other tools: rustdesk, micro, tmux, nmon, python3, certbot (letsencrypt sslip.io/nip.io or/and own cloudflare domain) ...
+        Certbot: letsencrypt sslip.io/nip.io or/and own cloudflare domain
+        Other tools: rustdesk, micro, tmux, nmon, python3 ...
 
 Configure in config.sh or create configself.sh
 
