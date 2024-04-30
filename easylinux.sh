@@ -1,14 +1,4 @@
 #!/bin/bash
-
-source config.sh
-source configself.sh
-apt-get update
-apt-get install -y --no-install-recommends --no-install-suggests \
-  kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils \
-  ncdu wget net-tools iputils-ping curl ca-certificates iproute2 \
-  nano procps tree telnet tmux bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip gnupg2 zip unzip git lzma gpg
-#tig
-timedatectl set-timezone Europe/Moscow
 if [ -f /etc/os-release ]; then
     . /etc/os-release
     if [ "$ID" == "ubuntu" ]; then
@@ -20,7 +10,17 @@ if [ -f /etc/os-release ]; then
     fi
 else
     OS="not possible to detect OS"
+    exit 1
 fi
+source config.sh
+source configself.sh
+apt-get update
+apt-get install -y --no-install-recommends --no-install-suggests \
+  kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils \
+  ncdu wget net-tools iputils-ping curl ca-certificates iproute2 \
+  nano procps tree telnet tmux bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip gnupg2 zip unzip git lzma gpg
+#tig
+timedatectl set-timezone Europe/Moscow
 echo "detected $OS $VERSION_ID"
 echo "set -g mouse on" >> /etc/tmux.conf
 mkdir -p ~/.config/pip
