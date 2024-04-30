@@ -23,6 +23,8 @@ config in config.sh, example:
     rustdesk=0
     code-server=0
     tailscale=1
+    defined=0
+    definedkey=gmrnklgmrksl...........
     
     tls_prometheus_crt='' as base64 -w 0
     tls_prometheus_key='' as base64 -w 0

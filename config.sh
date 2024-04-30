@@ -20,6 +20,8 @@ wsl=1
 micro=1
 code_server=0
 rustdesk=0
+defined=0
+definedkey=gmrnklgmrksl...........
 tailscale=0
 tailscale_key='tskey-auth-....'
 #openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -keyout tls_prometheus_key.key -out tls_prometheus_crt.crt

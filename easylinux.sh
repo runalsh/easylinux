@@ -432,6 +432,15 @@ sudo systemctl start tailscaled
 tailscale up --advertise-exit-node --accept-routes --auth-key $tailscale_key
 #tailscale up --advertise-exit-node --accept-routes
 fi
+################### DEFINED #####################################################################################################################################
+if [[ "$defined" == "1" ]]; then
+wget -O /usr/bin/local/dnclient https://dl.defined.net/9b82a8a5/v0.4.1/linux/amd64/dnclient
+sudo chmod +x /usr/bin/local/dnclient
+dnclient install
+dnclient start
+dnclient enroll -code $definedkey
+fi
 
+################### END #####################################################################################################################################
 apt clean autoclean
 apt autoremove --yes
