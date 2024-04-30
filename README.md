@@ -25,6 +25,9 @@ config in config.sh, example:
     tailscale=1
     defined=0
     definedkey=gmrnklgmrksl...........
+    nebula=1
+    nebula_node_number=2
+    nebula_lighthouse_ip=133.33.33.33
     
     tls_prometheus_crt='' as base64 -w 0
     tls_prometheus_key='' as base64 -w 0

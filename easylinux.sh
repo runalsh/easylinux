@@ -440,7 +440,107 @@ dnclient install
 dnclient start
 dnclient enroll -code $definedkey
 fi
+################### NEBULA #####################################################################################################################################
+if [[ "$nebula" == "1" ]]; then
+wget -O /tmp/nebula-linux-amd64.tar.gz https://github.com/slackhq/nebula/releases/latest/download/nebula-linux-amd64.tar.gz
+tar -xzvf nebula-linux-arm64.tar.gz
+mv /tmp/{nebula,nebula-cert} /usr/local/bin/
+mkdir -p /etc/nebula/certs
+touch /etc/nebula/node$nebula_node_number
+#todo
+echo "$(echo "$nebulas_key" | base64 --decode)" > /etc/nebula/node"$nebula_node_number"_key.key
+echo "$(echo "$nebula_crt" | base64 --decode)" > /etc/nebula/node"$nebula_node_number"_crt.crt
+# echo "$(echo "$nebula_config" | base64 --decode)" > /etc/nebula/node"$nebula_node_number"_config.yml
 
+cat <<EOF > /etc/nebula/node"$nebula_node_number"_config.yml
+pki:
+  cert: /opt/nebula/certs/node1.crt
+  key: /opt/nebula/certs/node1.key
+static_host_map:
+  192.168.10.$nebula_node_number:
+    - $nebula_lighthouse_ip:4242
+relay:
+  relays:
+  - 192.168.10.1
+# punchy:
+#   punch: true
+#   respond: true
+#   target_all_remotes: false  
+lighthouse:
+  am_lighthouse: false
+  interval: 60
+  hosts:
+    - "192.168.10.$nebula_node_number"
+listen:
+  host: 0.0.0.0
+  port: 4242
+punchy:
+  punch: true
+tun:
+  disabled: false
+  dev: nebula
+  drop_local_broadcast: false
+  drop_multicast: false
+  tx_queue: 500
+  mtu: 1300
+  routes:
+  unsafe_routes:
+logging:
+  level: warning #info
+  format: text
+firewall:
+  # conntrack:
+  #   tcp_timeout: 12m
+  #   udp_timeout: 3m
+  #   default_timeout: 10m
+  #   max_connections: 100000
+  inbound:
+  - description: allow ping
+    host: any
+    port: any
+    proto: icmp
+  - description: allow all
+    host: any
+    port: any
+    proto: any
+  outbound:
+  - host: any
+    port: any
+    proto: any
+EOF
+
+mkdir -p /usr/lib/systemd/system
+cat <<EOF > /usr/lib/systemd/system/nebula.service
+[Unit]
+Description=nebula
+Wants=basic.target
+After=basic.target network.target
+
+[Service]
+SyslogIdentifier=nebula
+StandardOutput=syslog
+StandardError=syslog
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/nebula -config /etc/nebula/node"$nebula_node_number"_config.yml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable nebula
+systemctl start nebula
+systemctl status nebula
+
+# nebula-cert ca -name 'runalsh inc'
+# nebula-cert sign -name lighthouse -ip "192.168.10.1/24"
+# nebula-cert sign -name node2 -ip "192.168.10.2/24"
+# nebula-cert sign -name node3 -ip "192.168.10.3/24"
+# nebula-cert sign -name node4 -ip "192.168.10.4/24"
+# nebula-cert sign -name node5 -ip "192.168.10.5/24"
+
+fi
 ################### END #####################################################################################################################################
+rm -rf /tmp/*
 apt clean autoclean
 apt autoremove --yes

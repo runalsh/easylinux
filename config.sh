@@ -22,6 +22,9 @@ code_server=0
 rustdesk=0
 defined=0
 definedkey=gmrnklgmrksl...........
+nebula=1
+nebula_node_number=2
+nebula_lighthouse_ip=133.33.33.33
 tailscale=0
 tailscale_key='tskey-auth-....'
 #openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -keyout tls_prometheus_key.key -out tls_prometheus_crt.crt
