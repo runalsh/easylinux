@@ -410,10 +410,10 @@ set autoindent
 set indicator       
 include "/usr/share/nano/*.nanorc" 
 set constantshow    
-set multibuffer
 set softwrap
 bind Sh-M-U "{nextword}{mark}{prevword}{execute}|sed 's/.*/\U&/'{enter}" main
 bind Sh-M-L "{nextword}{mark}{prevword}{execute}|sed 's/.*/\L&/'{enter}" main
+bind Sh-M-C "{execute}|xsel -ib{enter}{undo}" main
 bind ^X cut main
 bind ^C copy main
 bind ^V paste all
@@ -421,6 +421,7 @@ bind ^Q exit all
 bind ^S savefile main
 bind ^W writeout main
 bind ^O insert main
+set multibuffer
 bind ^H help all
 bind ^H exit help
 bind ^F whereis all
@@ -428,8 +429,11 @@ bind ^G findnext all
 bind ^B wherewas all
 bind ^D findprevious all
 bind ^R replace main
-bind ^Z undo main
-bind ^Y redo main
+unbind ^U all
+unbind ^N main
+unbind ^Y all
+unbind M-J main
+unbind M-T main
 bind ^A mark main
 bind ^P location main
 bind ^T gotoline main
@@ -437,6 +441,10 @@ bind ^T gotodir browser
 bind ^T cutrestoffile execute
 bind ^L linter execute
 bind ^E execute main
+bind ^K "{mark}{end}{zap}" main
+bind ^U "{mark}{home}{zap}" main
+bind ^Z undo main
+bind ^Y redo main
 EOF
 ################### code-server #####################################################################################################################################
 if [[ "$code_server" == "1" ]]; then
