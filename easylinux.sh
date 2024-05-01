@@ -17,7 +17,7 @@ source configself.sh
 apt-get update
 apt-get install -y --no-install-recommends --no-install-suggests \
   kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils \
-  ncdu wget net-tools iputils-ping curl ca-certificates iproute2 \
+  ncdu wget net-tools iputils-ping curl ca-certificates iproute2 dnsutils \
   nano procps tree telnet tmux bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip zip unzip git lzma gpg
 #tig iptables-persistent
 timedatectl set-timezone Europe/Moscow
@@ -452,6 +452,8 @@ curl -fsSL https://code-server.dev/install.sh | sh
 echo $(cat ~/.config/code-server/config.yaml |grep password:)
 # Replaces "bind-addr: 127.0.0.1:8080" with "bind-addr: 0.0.0.0:443" in the code-server config.
 sed -i.bak 's/bind-addr: 127.0.0.1:8080/bind-addr: 0.0.0.0:8181/' ~/.config/code-server/config.yaml
+# Replaces "cert: false" with "cert: true" in the code-server config.
+sed -i.bak 's/cert: false/cert: true/' ~/.config/code-server/config.yaml
 # Allows code-server to listen on low ports.
 sudo setcap cap_net_bind_service=+ep /usr/lib/code-server/lib/node
 sed -i "s/^password.*/password: $code_server_passw/" ~/.config/code-server/config.yaml
