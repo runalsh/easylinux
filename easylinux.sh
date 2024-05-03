@@ -16,7 +16,7 @@ source config.sh
 source configself.sh
 apt-get update
 apt-get install -y --no-install-recommends --no-install-suggests \
-  kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils \
+  kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils make \
   ncdu wget net-tools iputils-ping curl ca-certificates iproute2 dnsutils \
   nano procps tree telnet tmux bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip zip unzip git lzma gpg
 #tig iptables-persistent
