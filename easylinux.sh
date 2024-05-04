@@ -7,10 +7,8 @@ if [ -f /etc/os-release ]; then
         echo "detected $OS $VERSION"
     else
         echo "unsuported linux detected, script will break"
+	exit 1
     fi
-else
-    echo "not possible to detect OS"
-    exit 1
 fi
 source config.sh
 source configself.sh
