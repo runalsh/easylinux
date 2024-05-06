@@ -204,7 +204,7 @@ sudo touch /etc/node_exporter/configuration.yml
 sudo chmod 700 /etc/node_exporter
 sudo chmod 600 /etc/node_exporter/*
 sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
-sudo cat << EOF >> /etc/node_exporter/configuration.yml
+sudo cat << EOF > /etc/node_exporter/configuration.yml
 basic_auth_users:
   prometheus: $observ_passw_hash
 tls_server_config:
@@ -286,6 +286,10 @@ scrape_configs:
     static_configs:
       - targets:
         - localhost:9100 #put you remote server here
+  - job_name: docker
+    static_configs:
+      - targets:
+        - localhost:9090 #put you remote server here
 EOF
 sudo cat << EOF > /etc/prometheus/web.yml
 basic_auth_users:
