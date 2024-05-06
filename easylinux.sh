@@ -178,10 +178,13 @@ fi
 if [[ "$node_exporter" == "1" ]]; then
 URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/node_exporter/releases/latest`
 VERSION_NE=${URL_NE##*/}
-wget -O /tmp/node_exporter.tar.gz https://github.com/prometheus/node_exporter/releases/download/${VERSION_NE}/node_exporter-${VERSION_NE#v}.linux-$(dpkg --print-architecture).tar.gz
-tar zxvf /tmp/node_exporter.tar.gz -C /usr/local/
 rm -rf /tmp/node_exporter.tar.gz
-ln -s /usr/local/node_exporter-${VERSION_NE#v}.linux-$(dpkg --print-architecture)/node_exporter /usr/local/bin/node_exporter
+wget -O /tmp/node_exporter.tar.gz https://github.com/prometheus/node_exporter/releases/download/${VERSION_NE}/node_exporter-${VERSION_NE#v}.linux-$(dpkg --print-architecture).tar.gz
+mkdir -p /usr/local/node_exporter
+tar zxvf /tmp/node_exporter.tar.gz -C /usr/local/node_exporter --strip-components=1
+rm -rf /tmp/node_exporter.tar.gz
+rm -rf /usr/local/bin/node_exporter
+ln -s /usr/local/node_exporter/node_exporter /usr/local/bin/node_exporter
 useradd --no-create-home --shell /bin/false node_exporter
 sudo cat << EOF > /etc/systemd/system/node_exporter.service
 [Unit]
@@ -216,10 +219,13 @@ fi
 if [[ "$prometheus" == "1" ]]; then
 URL_PROM=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/prometheus/releases/latest`
 VERSION_PROM=${URL_PROM##*/}
-wget -O /tmp/prometheus.tar.gz https://github.com/prometheus/prometheus/releases/download/${VERSION_PROM}/prometheus-${VERSION_PROM#v}.linux-$(dpkg --print-architecture).tar.gz
-tar zxvf /tmp/prometheus.tar.gz -C /usr/local/
 rm -rf /tmp/prometheus.tar.gz
-ln -s /usr/local/prometheus-${VERSION_PROM#v}.linux-$(dpkg --print-architecture)/prometheus /usr/local/bin/prometheus
+wget -O /tmp/prometheus.tar.gz https://github.com/prometheus/prometheus/releases/download/${VERSION_PROM}/prometheus-${VERSION_PROM#v}.linux-$(dpkg --print-architecture).tar.gz
+mkdir -p /usr/local/prometheus
+tar zxvf /tmp/prometheus.tar.gz -C /usr/local/prometheus  --strip-components=1
+rm -rf /tmp/prometheus.tar.gz
+rm -rf /usr/local/bin/prometheus
+ln -s /usr/local/prometheus/prometheus /usr/local/bin/prometheus
 useradd --no-create-home --shell /bin/false prometheus
 sudo cat << 'EOF' > /etc/systemd/system/prometheus.service
 [Unit]
