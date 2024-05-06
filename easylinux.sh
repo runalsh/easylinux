@@ -170,6 +170,7 @@ observ_passw_hash=$(echo $observ_passw | htpasswd -inBC 10 "" | tr -d ':\n')
 #   -addext "subjectAltName = DNS:`hostname`"
 # echo -e $tls_prometheus_crt > /etc/ssl/tls_prometheus_crt.crt
 # echo -e $tls_prometheus_key > /etc/ssl/tls_prometheus_key.key
+mkdir -p /etc/ssl
 echo "$(echo "$tls_prometheus_key" | base64 --decode)" > /etc/ssl/tls_prometheus_key.key
 echo "$(echo "$tls_prometheus_crt" | base64 --decode)" > /etc/ssl/tls_prometheus_crt.crt
 chmod 777 /etc/ssl/{tls_prometheus_crt.crt,tls_prometheus_key.key}
@@ -250,10 +251,10 @@ global:
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
 # Alertmanager configuration
-alerting:
-  alertmanagers:
-  - static_configs:
-    - targets:
+# alerting:
+#   alertmanagers:
+#   - static_configs:
+#     - targets:
       # - alertmanager:9093
 rule_files:
   # - "first_rules.yml"
@@ -268,17 +269,23 @@ scrape_configs:
       ca_file: /etc/ssl/tls_prometheus_crt.crt
       insecure_skip_verify: true
     static_configs:
-    - targets: ['localhost:9090']
+      - targets:
+        - localhost:9090 #put you remote server here
   - job_name: 'node_exporter'
+    metrics_path: /metrics
     scheme: https
+    enable_compression: true
     basic_auth:
       username: $observ_user
       password: $observ_passw
     tls_config:
       ca_file: /etc/ssl/tls_prometheus_crt.crt
       insecure_skip_verify: true
+    follow_redirects: true
+    enable_http2: true
     static_configs:
-    - targets: ['localhost:9100']
+      - targets:
+        - localhost:9100 #put you remote server here
 EOF
 sudo cat << EOF > /etc/prometheus/web.yml
 basic_auth_users:
