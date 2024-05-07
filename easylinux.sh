@@ -170,22 +170,22 @@ DEBIAN_FRONTEND=noninteractive sudo sh ./get-docker.sh
 EOF    
     if [[ "$tailscale" == "1" ]]; then
       ts_docker=$(ifconfig | awk '/tailscale0:/ {getline; if ($1 == "inet") print $2}')
-      sed -i "/127.0.0.1:9323/s/$/, "$ts_docker:2375"/" /etc/docker/daemon.json
+      sed -i "/"127.0.0.1:9323"/s/$/, "$ts_docker:2375"/" /etc/docker/daemon.json
       sed -i "s|ExecStart=/usr/bin/dockerd|ExecStart=/usr/bin/dockerd -H tcp://$ts_docker:2375|" /etc/systemd/system/multi-user.target.wants/docker.service
     fi
     if [[ "$zerotier" == "1" ]]; then
       zt_docker=$(ifconfig | awk '/ztmjfjbmrl:/ {getline; if ($1 == "inet") print $2}')
-      sed -i "/127.0.0.1:9323/s/$/, "$zt_docker:2375"/" /etc/docker/daemon.json
+      sed -i "/"127.0.0.1:9323"/s/$/, "$zt_docker:2375"/" /etc/docker/daemon.json
       sed -i "s|ExecStart=/usr/bin/dockerd|ExecStart=/usr/bin/dockerd -H tcp://$zt_docker:2375|" /etc/systemd/system/multi-user.target.wants/docker.service
     fi
     if [[ "$defined" == "1" ]]; then
       def_docker=$(ifconfig | awk '/defined1:/ {getline; if ($1 == "inet") print $2}')
-      sed -i "/127.0.0.1:9323/s/$/, "$def_docker:2375"/" /etc/docker/daemon.json
+      sed -i "/"127.0.0.1:9323"/s/$/, "$def_docker:2375"/" /etc/docker/daemon.json
       sed -i "s|ExecStart=/usr/bin/dockerd|ExecStart=/usr/bin/dockerd -H tcp://$def_docker:2375|" /etc/systemd/system/multi-user.target.wants/docker.service
     fi
     if [[ "$nebula" == "1" ]]; then
       neb_docker=$(ifconfig | awk '/nebula/ {getline; if ($1 == "inet") print $2}')
-      sed -i "/127.0.0.1:9323/s/$/, "$neb_docker:2375"/" /etc/docker/daemon.json
+      sed -i "/"127.0.0.1:9323"/s/$/, "$neb_docker:2375"/" /etc/docker/daemon.json
       sed -i "s|ExecStart=/usr/bin/dockerd|ExecStart=/usr/bin/dockerd -H tcp://$neb_docker:2375|" /etc/systemd/system/multi-user.target.wants/docker.service
     fi
   fi
