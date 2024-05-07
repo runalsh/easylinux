@@ -207,7 +207,7 @@ observ_passw_hash=$(echo $observ_passw | htpasswd -inBC 10 "" | tr -d ':\n')
 mkdir -p /etc/ssl
 echo "$(echo "$tls_prometheus_key" | base64 --decode)" > /etc/ssl/tls_prometheus_key.key
 echo "$(echo "$tls_prometheus_crt" | base64 --decode)" > /etc/ssl/tls_prometheus_crt.crt
-chmod 777 /etc/ssl/{tls_prometheus_crt.crt,tls_prometheus_key.key}
+chmod 666 /etc/ssl/{tls_prometheus_crt.crt,tls_prometheus_key.key}
 fi
 ################### NODE EXPORTER #####################################################################################################################################
 if [[ "$node_exporter" == "1" ]]; then
@@ -229,7 +229,7 @@ After=network.target
 User=node_exporter
 Group=node_exporter
 Type=simple
-ExecStart=/usr/local/bin/node_exporter $ARGS --web.config.file='/etc/node_exporter/configuration.yml'
+ExecStart=/usr/local/bin/node_exporter --web.config.file='/etc/node_exporter/configuration.yml'
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -270,7 +270,7 @@ After=network.target
 User=prometheus
 Group=prometheus
 Type=simple
-ExecStart=/usr/local/bin/prometheus $ARGS \
+ExecStart=/usr/local/bin/prometheus \
 --config.file='/etc/prometheus/prometheus.yml' \
 --web.config.file='/etc/prometheus/web.yml' \
 --storage.tsdb.path /var/lib/prometheus/ \
@@ -372,7 +372,7 @@ After=network.target
 User=alertmanager
 Group=alertmanager
 Type=simple
-ExecStart=/usr/local/bin/alertmanager $ARGS \
+ExecStart=/usr/local/bin/alertmanager \
 --config.file=/etc/alertmanager/alertmanager.yml \
 --web.config.file=/etc/prometheus/web.yml \
 --storage.path=/etc/alertmanager/alertmanager_data
