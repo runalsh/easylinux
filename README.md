@@ -1,7 +1,7 @@
 ### Preconfigure bash and reqs for debian based os
 
         Network overlay: zerotier, nebula, defined, tailscale, ngrok
-        Observability: nodeexporter, prometheus - with precreated certs
+        Observability: nodeexporter, prometheus, alertmanager - with precreated certs
         Dev tools: terraform, helm, kubectl, code server (VS code)
         Virt: docker
         WSL optimization (WSL section)
