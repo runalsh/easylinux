@@ -240,7 +240,7 @@ sudo chmod 600 /etc/node_exporter/*
 sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 sudo cat << EOF > /etc/node_exporter/configuration.yml
 basic_auth_users:
-  prometheus: $observ_passw_hash
+  $observ_user: $observ_passw_hash
 tls_server_config:
   cert_file: /etc/ssl/tls_prometheus_crt.crt
   key_file: /etc/ssl/tls_prometheus_key.key
@@ -342,7 +342,7 @@ scrape_configs:
 EOF
 sudo cat << EOF > /etc/prometheus/web.yml
 basic_auth_users:
-  prometheus: $observ_passw_hash
+  $observ_user: $observ_passw_hash
 tls_server_config:
   cert_file: /etc/ssl/tls_prometheus_crt.crt
   key_file: /etc/ssl/tls_prometheus_key.key
@@ -412,7 +412,7 @@ inhibit_rules:
 EOF    
 sudo cat << EOF > /etc/prometheus/web.yml
 basic_auth_users:
-  prometheus: $observ_passw_hash
+  $observ_user: $observ_passw_hash
 tls_server_config:
   cert_file: /etc/ssl/tls_prometheus_crt.crt
   key_file: /etc/ssl/tls_prometheus_key.key
@@ -513,7 +513,7 @@ ExecStart=/usr/local/bin/cadvisor --listen_ip="0.0.0.0" --port=9089 --storage_du
 [Install]
 WantedBy=multi-user.target
 EOF
-sudo mkdir -p /etc/cadvisor/
+sudo mkdir -p /etc/cadvisor
 sudo touch /etc/cadvisor/auth.htpasswd
 htpasswd -c -i -b /etc/cadvisor/auth.htpasswd $observ_user $observ_passw
 sudo chmod 700 /etc/cadvisor
