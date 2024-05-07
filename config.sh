@@ -22,6 +22,7 @@ ngrok_key='2f...........YF'
 prometheus=0
 alertmanager=0
 node_exporter=0
+cadvisor=0
 observ_user='p...........s'
 observ_passw='r...........h'
 #openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -keyout tls_prometheus_key.key -out tls_prometheus_crt.crt

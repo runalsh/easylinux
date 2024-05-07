@@ -161,6 +161,7 @@ curl -fsSL https://get.docker.com -o get-docker.sh
 sed -i '/sleep/d' get-docker.sh
 DEBIAN_FRONTEND=noninteractive sudo sh ./get-docker.sh
   if [[ "$dockermetrics" == "1" ]]; then
+    mkdir -p /etc/docker
     sudo cat << EOF > /etc/docker/daemon.json
 {
   "experimental" : true,
@@ -191,7 +192,7 @@ EOF
   fi
 fi
 ################### OBSERVABILITY CERTS #####################################################################################################################################
-if [[ "$node_exporter" == "1" ]] || [[ "$prometheus" == "1" ]]; then
+if [[ "$node_exporter" == "1" ]] || [[ "$prometheus" == "1" ]] || [[ "$alertmanager" == "1" ]]; then
 observ_passw_hash=$(echo $observ_passw | htpasswd -inBC 10 "" | tr -d ':\n')
 # openssl genrsa -out /etc/ssl/tls_prometheus_key.key 2048
 # openssl req -new -key /etc/ssl/tls_prometheus_key.key -out /etc/ssl/tls_prometheus_csr.csr -subj "/CN=`hostname`" \-addext "subjectAltName = DNS:`hostname`"
@@ -489,6 +490,43 @@ systemctl enable alertmanager.service
 systemctl restart alertmanager.service
 systemctl status alertmanager.service
 fi
+################### cadvisor #####################################################################################################################################
+if [[ "$cadvisor" == "1" ]]; then
+URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/google/cadvisor/releases/latest`
+VERSION_NE=${URL_NE##*/}
+rm -rf /tmp/cadvisor
+wget -O /tmp/cadvisor https://github.com/google/cadvisor/releases/download/${VERSION_NE}/cadvisor-v${VERSION_NE#v}-linux-$(dpkg --print-architecture)
+mkdir -p /usr/local/cadvisor
+mv --force /tmp/cadvisor /usr/local/cadvisor/cadvisor
+chmod +x /usr/local/cadvisor/cadvisor
+ln -s /usr/local/cadvisor/cadvisor /usr/local/bin/cadvisor
+useradd --no-create-home --shell /bin/false cadvisor
+sudo cat << EOF > /etc/systemd/system/cadvisor.service
+[Unit]
+Description=cadvisor
+After=network.target
+[Service]
+# User=cadvisor
+# Group=docker
+Type=simple
+ExecStart=/usr/local/bin/cadvisor --listen_ip="0.0.0.0" --port=9089 --storage_duration=1m0s --http_auth_file="/etc/cadvisor/auth.htpasswd" --docker_only
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo mkdir -p /etc/cadvisor/
+sudo touch /etc/cadvisor/auth.htpasswd
+htpasswd -c -i -b /etc/cadvisor/auth.htpasswd $observ_user $observ_passw
+sudo chmod 700 /etc/cadvisor
+sudo chmod 600 /etc/cadvisor/*
+sudo usermod -aG docker cadvisor
+sudo chown --recursive cadvisor:cadvisor /etc/cadvisor
+chown cadvisor /var/run/docker.sock
+systemctl daemon-reload
+systemctl enable cadvisor.service
+systemctl restart cadvisor.service
+systemctl status cadvisor.service
+fi
+
 ################### HELM #####################################################################################################################################
 if [[ "$helm" == "1" ]]; then
 curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
