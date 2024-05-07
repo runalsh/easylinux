@@ -20,6 +20,7 @@ zerotier_network='80...........37'
 ngrok_key='2f...........YF'
 ##################### Observability
 prometheus=0
+alertmanager=0
 node_exporter=0
 observ_user='p...........s'
 observ_passw='r...........h'
@@ -36,6 +37,7 @@ terrafom=0
 helm=0
 ##################### Virt
 docker=0
+dockermetrics=0
 ##################### Network optimization
 sysctl=1
 ##################### WSL

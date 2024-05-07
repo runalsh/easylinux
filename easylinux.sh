@@ -160,6 +160,35 @@ if [[ "$docker" == "1" ]]; then
 curl -fsSL https://get.docker.com -o get-docker.sh
 sed -i '/sleep/d' get-docker.sh
 DEBIAN_FRONTEND=noninteractive sudo sh ./get-docker.sh
+  if [[ "$dockermetrics" == "1" ]]; then
+    sudo cat << EOF > /etc/docker/daemon.json
+{
+  "experimental" : true,
+  "metrics-addr": ["127.0.0.1:9323"
+    ]
+}
+EOF    
+    if [[ "$tailscale" == "1" ]]; then
+      ts_docker=$(ifconfig | awk '/tailscale0:/ {getline; if ($1 == "inet") print $2}')
+      sed -i "/127.0.0.1:9323/s/$/, "$ts_docker:2375"/" /etc/docker/daemon.json
+      sed -i "s|ExecStart=/usr/bin/dockerd|ExecStart=/usr/bin/dockerd -H tcp://$ts_docker:2375|" /etc/systemd/system/multi-user.target.wants/docker.service
+    fi
+    if [[ "$zerotier" == "1" ]]; then
+      zt_docker=$(ifconfig | awk '/ztmjfjbmrl:/ {getline; if ($1 == "inet") print $2}')
+      sed -i "/127.0.0.1:9323/s/$/, "$zt_docker:2375"/" /etc/docker/daemon.json
+      sed -i "s|ExecStart=/usr/bin/dockerd|ExecStart=/usr/bin/dockerd -H tcp://$zt_docker:2375|" /etc/systemd/system/multi-user.target.wants/docker.service
+    fi
+    if [[ "$defined" == "1" ]]; then
+      def_docker=$(ifconfig | awk '/defined1:/ {getline; if ($1 == "inet") print $2}')
+      sed -i "/127.0.0.1:9323/s/$/, "$def_docker:2375"/" /etc/docker/daemon.json
+      sed -i "s|ExecStart=/usr/bin/dockerd|ExecStart=/usr/bin/dockerd -H tcp://$def_docker:2375|" /etc/systemd/system/multi-user.target.wants/docker.service
+    fi
+    if [[ "$nebula" == "1" ]]; then
+      neb_docker=$(ifconfig | awk '/nebula/ {getline; if ($1 == "inet") print $2}')
+      sed -i "/127.0.0.1:9323/s/$/, "$neb_docker:2375"/" /etc/docker/daemon.json
+      sed -i "s|ExecStart=/usr/bin/dockerd|ExecStart=/usr/bin/dockerd -H tcp://$neb_docker:2375|" /etc/systemd/system/multi-user.target.wants/docker.service
+    fi
+  fi
 fi
 ################### OBSERVABILITY CERTS #####################################################################################################################################
 if [[ "$node_exporter" == "1" ]] || [[ "$prometheus" == "1" ]]; then
@@ -199,7 +228,7 @@ After=network.target
 User=node_exporter
 Group=node_exporter
 Type=simple
-ExecStart=/usr/local/bin/node_exporter --web.config.file='/etc/node_exporter/configuration.yml'
+ExecStart=/usr/local/bin/node_exporter $ARGS --web.config.file='/etc/node_exporter/configuration.yml'
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -240,7 +269,12 @@ After=network.target
 User=prometheus
 Group=prometheus
 Type=simple
-ExecStart=/usr/local/bin/prometheus --config.file='/etc/prometheus/prometheus.yml' --web.config.file='/etc/prometheus/web.yml'
+ExecStart=/usr/local/bin/prometheus $ARGS \
+--config.file='/etc/prometheus/prometheus.yml' \
+--web.config.file='/etc/prometheus/web.yml' \
+--storage.tsdb.path /var/lib/prometheus/ \
+--web.console.templates=/etc/prometheus/consoles \
+--web.console.libraries=/etc/prometheus/console_libraries \
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -254,15 +288,25 @@ global:
   scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
+
 # Alertmanager configuration
-# alerting:
-#   alertmanagers:
-#   - static_configs:
-#     - targets:
-      # - alertmanager:9093
+alerting:
+  alertmanagers:
+    - scheme: https
+    basic_auth:
+      username: $observ_user
+      password: $observ_passw
+    tls_config: 
+      ca_file: /etc/ssl/tls_prometheus_crt.crt
+      insecure_skip_verify: true
+  - static_configs:
+    - targets:
+      - localhost:9093
+
 rule_files:
-  # - "first_rules.yml"
-  # - "second_rules.yml"
+#  - "/etc/alertmanager/rules.yml"
+#  - "second_rules.yml"
+
 scrape_configs:
   - job_name: 'prometheus'
     scheme: https
@@ -306,6 +350,144 @@ systemctl daemon-reload
 systemctl enable prometheus.service
 systemctl restart prometheus.service
 systemctl status prometheus.service
+fi
+################### ALERTMANAGER #####################################################################################################################################
+if [[ "$alertmanager" == "1" ]]; then
+URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/alertmanager/releases/latest`
+VERSION_NE=${URL_NE##*/}
+rm -rf /tmp/alertmanager.tar.gz
+wget -O /tmp/alertmanager.tar.gz https://github.com/prometheus/alertmanager/releases/download/${VERSION_NE}/alertmanager-${VERSION_NE#v}.linux-$(dpkg --print-architecture).tar.gz
+mkdir -p /usr/local/alertmanager
+tar zxvf /tmp/alertmanager.tar.gz -C /usr/local/alertmanager --strip-components=1
+rm -rf /tmp/alertmanager.tar.gz
+rm -rf /usr/local/bin/alertmanager
+ln -s /usr/local/alertmanager/alertmanager /usr/local/bin/alertmanager
+useradd --no-create-home --shell /bin/false alertmanager
+sudo cat << EOF > /etc/systemd/system/alertmanager.service
+[Unit]
+Description=Alert Manager
+After=network.target
+[Service]
+User=alertmanager
+Group=alertmanager
+Type=simple
+ExecStart=/usr/local/bin/alertmanager $ARGS \
+--config.file=/etc/alertmanager/alertmanager.yml \
+--web.config.file=/etc/prometheus/web.yml \
+--storage.path=/etc/alertmanager/alertmanager_data
+[Install]
+WantedBy=multi-user.target
+EOF
+mkdir -p /etc/alertmanager/alertmanager_data
+sudo touch /etc/alertmanager/configuration.yml
+sudo chmod 700 /etc/alertmanager
+sudo chmod 600 /etc/alertmanager/*
+sudo chown --recursive alertmanager:alertmanager /etc/alertmanager
+sudo cat << EOF > /etc/prometheus/alertmanager.yml
+route:
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: 'runalsh'
+receivers:
+- name: 'runalsh'
+  email_configs:
+  - to: 'runalsh@runalsh.runalsh'
+    from: 'runalsh@runalsh.runalsh'
+    smarthost: 'smtp.runalsh.runalsh:587'
+    auth_username: 'runalsh'
+    auth_identity: 'runalsh'
+    auth_password: '***'
+  telegram_configs:
+  - bot_token: '665278652783657865:AGYGYGVUFVBUIEGBFIGBIB'
+    chat_id: ***
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'dev', 'instance']
+EOF    
+sudo cat << EOF > /etc/prometheus/web.yml
+basic_auth_users:
+  prometheus: $observ_passw_hash
+tls_server_config:
+  cert_file: /etc/ssl/tls_prometheus_crt.crt
+  key_file: /etc/ssl/tls_prometheus_key.key
+EOF
+sed -i 's|^#  - \"/etc/alertmanager/rules.yml\"|  - "/etc/alertmanager/rules.yml"|' /etc/prometheus/prometheus.yml
+sudo cat << EOF > /etc/alertmanager/rules.yml
+groups:
+- name: monitor
+  rules:
+  - alert: Monitor_node_exporter_down
+    expr: up{job="node_exporter"} == 0
+    for: 10s
+    annotations:
+      title: 'Monitor Node Exporter Down'
+      description: 'Monitor Node Exporter Down'
+    labels:
+      severity: 'crit'
+
+  - alert: Monitor_prometheus_exporter_down
+    expr: up{job="prometheus"} == 0
+    for: 10s
+    annotations:
+      title: 'Monitor Node Exporter Down'
+      description: 'Monitor Node Exporter Down'
+    labels:
+      severity: 'crit'
+
+  - alert: Monitor_High_CPU_utiluzation
+    expr: node_load1{job="node_exporter"} > 0.9
+    for: 1m
+    annotations:
+      title: 'High CPU utiluzation'
+      description: 'High CPU utiluzation'
+    labels:
+      severity: 'crit'
+
+  - alert: Monitor_High_memory_utiluzation
+    expr: ((node_memory_MemAvailable_bytes{job="node_exporter"} / node_memory_MemTotal_bytes{job="node_exporter"}) * 100) < 10
+    for: 1m
+    annotations:
+      title: 'High memory utiluzation'
+      description: 'High memory utiluzation'
+    labels:
+      severity: 'crit'
+
+  - alert: Monitor_Disc_space_problem
+    expr: ((node_filesystem_avail_bytes{job="node_exporter", mountpoint="/",fstype!="rootfs"} / node_filesystem_size_bytes{job="node_exporter", mountpoint="/",fstype!="rootfs"}) * 100) < 10
+    for: 10m
+    annotations:
+      title: 'Disk 90% full'
+      description: 'Disk 90% full'
+    labels:
+      severity: 'crit'
+
+  - alert: Monitor_High_port_incoming_utilization
+    expr: (rate(node_network_receive_bytes_total{job="node_exporter", device="ens3"}[5m]) / 1024 / 1024) > 100
+    for: 5s
+    annotations:
+      title: 'High port input load'
+      description: 'Incoming port load > 100 Mb/s'
+    labels:
+      severity: 'crit'
+
+  - alert: Monitor_High_port_outcoming_utilization
+    expr: (rate(node_network_transmit_bytes_total{ job="node_exporter", device="ens3"}[5m]) / 1024 / 1024) > 100
+    for: 5s
+    annotations:
+      title: High outbound port utilization
+      description: 'Outcoming port load > 100 Mb/s'
+    labels:
+      severity: 'crit'
+EOF
+systemctl daemon-reload
+systemctl enable alertmanager.service
+systemctl restart alertmanager.service
+systemctl status alertmanager.service
 fi
 ################### HELM #####################################################################################################################################
 if [[ "$helm" == "1" ]]; then
