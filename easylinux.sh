@@ -393,15 +393,15 @@ route:
 receivers:
 - name: 'runalsh'
   email_configs:
-  - to: 'runalsh@runalsh.runalsh'
-    from: 'runalsh@runalsh.runalsh'
-    smarthost: 'smtp.runalsh.runalsh:587'
+  - to: 'runalsh@mail.example.com'
+    from: 'runalsh@mail.example.com'
+    smarthost: 'smtp.mail.example.com:587'
     auth_username: 'runalsh'
     auth_identity: 'runalsh'
     auth_password: '***'
   telegram_configs:
   - bot_token: '665278652783657865:AGYGYGVUFVBUIEGBFIGBIB'
-    chat_id: ***
+    chat_id: 5324543543563453453
 inhibit_rules:
   - source_match:
       severity: 'critical'
