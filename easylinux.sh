@@ -10,6 +10,10 @@ if [ -f /etc/os-release ]; then
 	exit 1
     fi
 fi
+if [[ "${UID}" -ne 0 ]]; then
+  echo -e "You need to run this script as root!"
+  exit 1
+fi
 source config.sh
 source configself.sh
 apt-get update
