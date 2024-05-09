@@ -229,22 +229,25 @@ After=network.target
 User=node_exporter
 Group=node_exporter
 Type=simple
-ExecStart=/usr/local/bin/node_exporter --web.config.file='/etc/node_exporter/configuration.yml'
+ExecStart=/usr/local/bin/node_exporter --web.config.file='/etc/node_exporter/web.yml'
 [Install]
 WantedBy=multi-user.target
 EOF
+if [[ "$less_user_priveleges" == "0" ]]; then
+sed -i '/^\(User\|Group\)=/d'  /etc/systemd/system/node_exporter.service
+fi
 sudo mkdir -p /etc/node_exporter/
 sudo touch /etc/node_exporter/configuration.yml
-sudo chmod 700 /etc/node_exporter
-sudo chmod 600 /etc/node_exporter/*
-sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
-sudo cat << EOF > /etc/node_exporter/configuration.yml
+sudo chmod 740 /etc/node_exporter
+sudo chmod 660 /etc/node_exporter/*
+sudo cat << EOF > /etc/node_exporter/web.yml
 basic_auth_users:
   $observ_user: $observ_passw_hash
 tls_server_config:
   cert_file: /etc/ssl/tls_prometheus_crt.crt
   key_file: /etc/ssl/tls_prometheus_key.key
 EOF
+sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 systemctl daemon-reload
 systemctl enable node_exporter.service
 systemctl restart node_exporter.service
@@ -262,6 +265,7 @@ rm -rf /tmp/prometheus.tar.gz
 rm -rf /usr/local/bin/prometheus
 ln -s /usr/local/prometheus/prometheus /usr/local/bin/prometheus
 useradd --no-create-home --shell /bin/false prometheus
+observ_passw_hash=$(echo $observ_passw | htpasswd -inBC 10 "" | tr -d ':\n')
 sudo cat << 'EOF' > /etc/systemd/system/prometheus.service
 [Unit]
 Description=Prometheus
@@ -273,27 +277,30 @@ Type=simple
 ExecStart=/usr/local/bin/prometheus \
 --config.file='/etc/prometheus/prometheus.yml' \
 --web.config.file='/etc/prometheus/web.yml' \
---storage.tsdb.path /var/lib/prometheus/ \
+--storage.tsdb.path /var/lib/prometheus \
 --web.console.templates=/etc/prometheus/consoles \
---web.console.libraries=/etc/prometheus/console_libraries \
+--web.console.libraries=/etc/prometheus/console_libraries
 [Install]
 WantedBy=multi-user.target
 EOF
+if [[ "$less_user_priveleges" == "0" ]]; then
+sed -i '/^\(User\|Group\)=/d'  /etc/systemd/system/prometheus.service
+fi
 sudo mkdir -p /etc/prometheus/
-sudo touch /etc/prometheus/prometheus.yml
-sudo chmod 700 /etc/prometheus
-sudo chmod 600 /etc/prometheus/*
-sudo chown --recursive prometheus:prometheus /etc/prometheus
+sudo chmod 740 /etc/prometheus
+sudo chmod 660 /etc/prometheus/*
+mkdir -p /var/lib/prometheus
+sudo chown --recursive prometheus:prometheus /var/lib/prometheus
 sudo cat << EOF > /etc/prometheus/prometheus.yml
 global:
   scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
 
-# Alertmanager configuration
+Alertmanager configuration
 alerting:
   alertmanagers:
-    - scheme: https
+  - scheme: https
     basic_auth:
       username: $observ_user
       password: $observ_passw
@@ -309,7 +316,7 @@ rule_files:
 #  - "second_rules.yml"
 
 scrape_configs:
-  - job_name: 'prometheus'
+  - job_name: prometheus
     scheme: https
     basic_auth:
       username: $observ_user
@@ -320,7 +327,7 @@ scrape_configs:
     static_configs:
       - targets:
         - localhost:9090 #put you remote server here
-  - job_name: 'node_exporter'
+  - job_name: node_exporter
     metrics_path: /metrics
     scheme: https
     enable_compression: true
@@ -347,6 +354,7 @@ tls_server_config:
   cert_file: /etc/ssl/tls_prometheus_crt.crt
   key_file: /etc/ssl/tls_prometheus_key.key
 EOF
+sudo chown --recursive prometheus:prometheus /etc/prometheus
 systemctl daemon-reload
 systemctl enable prometheus.service
 systemctl restart prometheus.service
@@ -374,48 +382,63 @@ Group=alertmanager
 Type=simple
 ExecStart=/usr/local/bin/alertmanager \
 --config.file=/etc/alertmanager/alertmanager.yml \
---web.config.file=/etc/prometheus/web.yml \
---storage.path=/etc/alertmanager/alertmanager_data
+--web.config.file=/etc/alertmanager/web.yml \
+--storage.path=/etc/alertmanager/alertmanager_data \
+--cluster.listen-address=127.0.0.1:9094
 [Install]
 WantedBy=multi-user.target
 EOF
+if [[ "$less_user_priveleges" == "0" ]]; then
+sed -i '/^\(User\|Group\)=/d' /etc/systemd/system/alertmanager.service
+fi
 mkdir -p /etc/alertmanager/alertmanager_data
-sudo touch /etc/alertmanager/configuration.yml
-sudo chmod 700 /etc/alertmanager
-sudo chmod 600 /etc/alertmanager/*
-sudo chown --recursive alertmanager:alertmanager /etc/alertmanager
-sudo cat << EOF > /etc/prometheus/alertmanager.yml
+sudo chmod 740 /etc/alertmanager
+sudo chmod 660 /etc/alertmanager/*
+sudo cat << EOF > /etc/alertmanager/alertmanager.yml
+global:
+  http_config:
+    tls_config:
+      ca_file: /etc/ssl/tls_prometheus_crt.crt
+      insecure_skip_verify: true
 route:
   group_by: ['alertname']
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 1h
-  receiver: 'runalsh'
+  receiver: email_telegram
+  routes:
+  - receiver: email_telegram
+    continue: true
+    matchers:
+     - severity="critical"
+  - receiver: blackhole
+    matchers:
+     - alertname="Watchdog"
+templates:
+  - '/etc/alertmanager/*.tmpl'  
 receivers:
-- name: 'runalsh'
-  email_configs:
-  - to: 'runalsh@mail.example.com'
-    from: 'runalsh@mail.example.com'
-    smarthost: 'smtp.mail.example.com:587'
-    auth_username: 'runalsh'
-    auth_identity: 'runalsh'
-    auth_password: '***'
+- name: blackhole
+- name: email_telegram
+  # email_configs:
+  # - to: 'runalsh@mail.example.com'
+  #   from: 'runalsh@mail.example.com'
+  #   smarthost: 'smtp.mail.example.com:587'
+  #   auth_username: 'runalsh'
+  #   auth_identity: 'runalsh'
+  #   auth_password: '***'
   telegram_configs:
-  - bot_token: '665278652783657865:AGYGYGVUFVBUIEGBFIGBIB'
-    chat_id: 5324543543563453453
-inhibit_rules:
-  - source_match:
-      severity: 'critical'
-    target_match:
-      severity: 'warning'
-    equal: ['alertname', 'dev', 'instance']
-EOF    
-sudo cat << EOF > /etc/prometheus/web.yml
-basic_auth_users:
-  $observ_user: $observ_passw_hash
-tls_server_config:
-  cert_file: /etc/ssl/tls_prometheus_crt.crt
-  key_file: /etc/ssl/tls_prometheus_key.key
+  - send_resolved: true
+    api_url: https://api.telegram.org
+    bot_token: '43265423453:AAr3grtbgtr4ttgr3r43et4g'
+    chat_id: 3454364564
+    message: '{{ template "telegram.default.message" . }}'
+    parse_mode: HTML  
+# inhibit_rules:
+#   - source_match:
+#       severity: 'critical'
+#     target_match:
+#       severity: 'warning'
+#     equal: ['alertname', 'dev', 'instance']
 EOF
 sed -i 's|^#  - \"/etc/alertmanager/rules.yml\"|  - "/etc/alertmanager/rules.yml"|' /etc/prometheus/prometheus.yml
 sudo cat << EOF > /etc/alertmanager/rules.yml
@@ -484,7 +507,57 @@ groups:
       description: 'Outcoming port load > 100 Mb/s'
     labels:
       severity: 'crit'
+
+  - alert: InstanceDown
+    expr: up == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute.'
+      summary: Instance {{ $labels.instance }} downestart=on-failure     
 EOF
+sudo cat << EOF > /etc/alertmanager/telegram.tmpl
+    {{ define "telegram.default" }}
+    {{ range .Alerts }}
+    {{ if eq .Status "firing"}}&#x1F525<b>{{ .Status | toUpper }}</b>&#x1F525{{ else }}&#x2705<b>{{ .Status | toUpper }}</b>&#x2705{{ end }}
+    <b>{{ .Labels.alertname }}</b>
+    {{- if .Labels.severity }}
+    <b>Severity:</b> {{ .Labels.severity }}
+    {{- end }}
+    {{- if .Labels.ds_name }}
+    <b>Database:</b> {{ .Labels.ds_name }}
+    {{- if .Labels.ds_group }}
+    <b>Group:</b> {{ .Labels.ds_group }}
+    {{- end }}
+    {{- end }}
+    {{- if .Labels.ds_id }}
+    <b>Cluster UUID: </b>
+    <code>{{ .Labels.ds_id }}</code>
+    {{- end }}
+    {{- if .Labels.instance }}
+    <b>Labels.instance:</b> {{ .Labels.instance }}
+    {{- end }}
+    {{- if .Annotations.message }}
+    {{ .Annotations.message }}
+    {{- end }}
+    {{- if .Annotations.summary }}
+    {{ .Annotations.summary }}
+    {{- end }}
+    {{- if .Annotations.description }}
+    {{ .Annotations.description }}
+    {{- end }}
+    {{ end }}
+    {{ end }}
+EOF
+sudo cat << EOF > /etc/alertmanager/web.yml
+basic_auth_users:
+  $observ_user: $observ_passw_hash
+tls_server_config:
+  cert_file: /etc/ssl/tls_prometheus_crt.crt
+  key_file: /etc/ssl/tls_prometheus_key.key
+EOF
+sudo chown --recursive alertmanager:alertmanager /etc/alertmanager
 systemctl daemon-reload
 systemctl enable alertmanager.service
 systemctl restart alertmanager.service
@@ -506,13 +579,18 @@ sudo cat << EOF > /etc/systemd/system/cadvisor.service
 Description=cadvisor
 After=network.target
 [Service]
-# User=cadvisor
-# Group=docker
+User=cadvisor
+Group=docker
 Type=simple
-ExecStart=/usr/local/bin/cadvisor --listen_ip="0.0.0.0" --port=9089 --storage_duration=1m0s --http_auth_file="/etc/cadvisor/auth.htpasswd" --docker_only
+ExecStart=/usr/local/bin/cadvisor --listen_ip="0.0.0.0" --port=9089 --storage_duration=1m0s --http_auth_file="/etc/cadvisor/auth.htpasswd" --docker_only=true --disable_metrics="advtcp,app,cpu_topology,cpuset,disk,hugetlb,memory_numa,percpu,perf_event,referenced_memory,resctrl,sched,tcp,udp"
+# --docker=tcp://localhost:2375
+# --enable_metrics=cpu,cpuLoad,diskIO,memory,network,oom_event,process
 [Install]
 WantedBy=multi-user.target
 EOF
+if [[ "$less_user_priveleges" == "0" ]]; then
+sed -i '/^\(User\|Group\)=/d' /etc/systemd/system/cadvisor.service
+fi
 sudo mkdir -p /etc/cadvisor
 sudo touch /etc/cadvisor/auth.htpasswd
 htpasswd -c -i -b /etc/cadvisor/auth.htpasswd $observ_user $observ_passw
