@@ -279,7 +279,9 @@ ExecStart=/usr/local/bin/prometheus \
 --web.config.file='/etc/prometheus/web.yml' \
 --storage.tsdb.path /var/lib/prometheus \
 --web.console.templates=/etc/prometheus/consoles \
---web.console.libraries=/etc/prometheus/console_libraries
+--web.console.libraries=/etc/prometheus/console_libraries \
+--storage.tsdb.retention=15d
+#--web.enable-admin-api
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -287,6 +289,7 @@ if [[ "$less_user_priveleges" == "0" ]]; then
 sed -i '/^\(User\|Group\)=/d'  /etc/systemd/system/prometheus.service
 fi
 sudo mkdir -p /etc/prometheus/
+sudo mkdir -p /etc/prometheus/discovered/
 sudo chmod 740 /etc/prometheus
 sudo chmod 660 /etc/prometheus/*
 mkdir -p /var/lib/prometheus
@@ -297,7 +300,7 @@ global:
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
 
-Alertmanager configuration
+#Alertmanager configuration
 alerting:
   alertmanagers:
   - scheme: https
@@ -316,6 +319,9 @@ rule_files:
 #  - "second_rules.yml"
 
 scrape_configs:
+  - job_name: 'discovered'
+    file_sd_configs:
+      - files: ['/etc/prometheus/discovered/*.yml']
   - job_name: prometheus
     scheme: https
     basic_auth:
@@ -396,6 +402,8 @@ sudo chmod 740 /etc/alertmanager
 sudo chmod 660 /etc/alertmanager/*
 sudo cat << EOF > /etc/alertmanager/alertmanager.yml
 global:
+  slackchannel="firefirefire"           #put you data
+  slackurl="https://slackclaskclaksclak" #put you data
   http_config:
     tls_config:
       ca_file: /etc/ssl/tls_prometheus_crt.crt
@@ -411,6 +419,10 @@ route:
     continue: true
     matchers:
      - severity="critical"
+  - receiver: slack
+    continue: true
+    matchers:
+     - severity="critical"   
   - receiver: blackhole
     matchers:
      - alertname="Watchdog"
@@ -418,6 +430,16 @@ templates:
   - '/etc/alertmanager/*.tmpl'  
 receivers:
 - name: blackhole
+- name: 'slack'
+      slack_configs:
+          - send_resolved: true
+            title: '{{ template "slack.fh.title" . }}'
+            pretext: '{{ template "slack.default.pretext" . }}'
+            text: '{{ template "slack.default.text" . }}'
+            fallback: '{{ template "slack.default.fallback" . }}'
+            username: 'Prometheus'
+            channel: '${slackchannel}'
+            api_url: ${slackurl} 
 - name: email_telegram
   # email_configs:
   # - to: 'runalsh@mail.example.com'
@@ -556,6 +578,13 @@ basic_auth_users:
 tls_server_config:
   cert_file: /etc/ssl/tls_prometheus_crt.crt
   key_file: /etc/ssl/tls_prometheus_key.key
+EOF
+sudo cat << EOF > /etc/alertmanager/slack.tmpl
+{{ define "__alertmanagerURL" }}https://${alertmanager_hostname}:$alertmanager_ext_port{{ end }}
+{{ define "__subject" }}[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.SortedPairs.Values | join " " }} {{ if gt (len .CommonLabels) (len .GroupLabels) }}({{ with .CommonLabels.Remove .GroupLabels.Names }}{{ .Values | join " " }}{{ end }}){{ end }}{{ end }}
+{{ define "slack.fh.title" }}{{ template "__subject" . }}{{ end }}
+{{ define "slack.fh.fallback" }}{{ template "slack.fh.title" . }} | {{ template "slack.fh.titlelink" . }}{{ end }}
+{{ define "slack.fh.titlelink" }}{{ template "__alertmanagerURL" . }}{{ end }}
 EOF
 sudo chown --recursive alertmanager:alertmanager /etc/alertmanager
 systemctl daemon-reload
