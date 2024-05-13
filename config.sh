@@ -49,6 +49,8 @@ bashrc=1
 
 #####################Other
 micro=1
+torrserver=0
+fail2ban=1
 rustdesk=0
 rustdesk_pub_key="4J...........Q="
 rustdesk_priv_key="t...........A=="

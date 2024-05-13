@@ -10,7 +10,8 @@
         SSH options (SSH section)
         Bash aliases and completions (BASHRC section)
         Certbot: letsencrypt sslip.io/nip.io or/and own cloudflare domain
-        Other tools: rustdesk, micro, tmux, nmon, python3 ...
+        Services: torrserver
+        Other tools: rustdesk, micro, tmux, nmon, python3, fail2ban ...
         Alternative repo for tailscale and hashicorp which block Russian ips
 
 Configure in config.sh or create configself.sh

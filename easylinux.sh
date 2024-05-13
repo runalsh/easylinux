@@ -20,7 +20,7 @@ apt-get update
 apt-get install -y --no-install-recommends --no-install-suggests \
   kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils make \
   ncdu wget net-tools iputils-ping curl ca-certificates iproute2 dnsutils \
-  nano procps tree telnet tmux bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip zip unzip git lzma gpg
+  nano procps tree telnet tmux screen bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip zip unzip git lzma gpg
 #tig iptables-persistent
 timedatectl set-timezone Europe/Moscow
 echo "set -g mouse on" >> /etc/tmux.conf
@@ -154,6 +154,47 @@ micro -plugin install manipulator
 # reverse: Reverses
 # base64enc: Base64 encodes
 # base64dec: Base64 decodes
+fi
+################### TORRSERVER #####################################################################################################################################
+if [[ "$torrserver" == "1" ]]; then
+mkdir /opt/torrserver
+cd /opt/torrserver
+wget -O TorrServer-linux-amd64 $(wget -q -O - https://api.github.com/repos/YouROK/TorrServer/releases/latest | grep browser_download_url | cut -d\" -f4 | egrep 'TorrServer-linux-amd64$') \
+chmod +x /opt/torrserver/TorrServer-linux-amd64
+ln -sf /opt/torrserver/torrserver.service /usr/local/lib/systemd/system/torrserver.service
+sudo cat << EOF > /opt/torrserver/torrserver.config
+DAEMON_OPTIONS="--port 64200 --sslport 64201 --path /opt/torrserver --ssl --httpauth"
+EOF
+sudo cat << EOF > /opt/torrserver/torrserver.service
+[Unit]
+Description = TorrServer - stream torrent to http
+Wants = network-online.target
+After = network.target
+[Service]
+Type = simple
+NonBlocking = true
+EnvironmentFile = /opt/torrserver/torrserver.config
+ExecStart = /opt/torrserver/TorrServer-linux-amd64 $DAEMON_OPTIONS
+ExecReload = /bin/kill -HUP ${MAINPID}
+ExecStop = /bin/kill -INT ${MAINPID}
+TimeoutSec = 30
+#WorkingDirectory = /opt/torrserver
+Restart = on-failure
+RestartSec = 5s
+#LimitNOFILE = 4096
+[Install]
+WantedBy = multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable torrserver
+systemctl restart torrserver
+
+fi
+################### FAIL2BAN #####################################################################################################################################
+if [[ "$fail2ban" == "1" ]]; then
+apt install fail2ban -y
+systemctl restart fail2ban
 fi
 ################### DOCKER #####################################################################################################################################
 if [[ "$docker" == "1" ]]; then
