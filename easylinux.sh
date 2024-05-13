@@ -163,7 +163,7 @@ wget -O TorrServer-linux-amd64 $(wget -q -O - https://api.github.com/repos/YouRO
 chmod +x /opt/torrserver/TorrServer-linux-amd64
 ln -sf /opt/torrserver/torrserver.service /usr/local/lib/systemd/system/torrserver.service
 sudo cat << EOF > /opt/torrserver/torrserver.config
-DAEMON_OPTIONS="--port 64200 --sslport 64201 --path /opt/torrserver --ssl --httpauth"
+DAEMON_OPTIONS="--port $torrserver_http_port --sslport $torrserver_https_port --path /opt/torrserver --ssl --httpauth"
 EOF
 sudo cat << EOF > /opt/torrserver/torrserver.service
 [Unit]
@@ -185,7 +185,11 @@ RestartSec = 5s
 [Install]
 WantedBy = multi-user.target
 EOF
-
+sudo cat << EOF > /opt/torrserver/accs.db
+{
+  "$torrserver_user": "$torrserver_passw"
+}
+EOF
 systemctl daemon-reload
 systemctl enable torrserver
 systemctl restart torrserver

@@ -46,15 +46,18 @@ sysctl=1
 wsl=1
 ##################### Bash aliases and completions
 bashrc=1
-
+##################### SERVICES
+torrserver=0
+torrserver_user=user
+torrserver_passw=password
+torrserver_http_port=1234
+torrserver_https_port=1234
 #####################Other
 micro=1
-torrserver=0
 fail2ban=1
 rustdesk=0
 rustdesk_pub_key="4J...........Q="
 rustdesk_priv_key="t...........A=="
-
 #####################Certbot
 domaincerts=0
 domaincerts_letsencrypt_cert=0
