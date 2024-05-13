@@ -49,7 +49,7 @@ bashrc=1
 ##################### SERVICES
 torrserver=0
 torrserver_user=user
-torrserver_passw=password
+torrserver_passw=passwd
 torrserver_http_port=1234
 torrserver_https_port=1234
 #####################Other
