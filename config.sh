@@ -20,6 +20,7 @@ zerotier_network='80...........37'
 ngrok_key='2f...........YF'
 ##################### Observability
 prometheus=0
+victoriametrics=0
 alertmanager=0
 node_exporter=0
 cadvisor=0

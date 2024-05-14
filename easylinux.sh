@@ -335,8 +335,6 @@ sed -i '/^\(User\|Group\)=/d'  /etc/systemd/system/prometheus.service
 fi
 sudo mkdir -p /etc/prometheus/
 sudo mkdir -p /etc/prometheus/discovered/
-sudo chmod 740 /etc/prometheus
-sudo chmod 660 /etc/prometheus/*
 mkdir -p /var/lib/prometheus
 sudo chown --recursive prometheus:prometheus /var/lib/prometheus
 sudo cat << EOF > /etc/prometheus/prometheus.yml
@@ -344,6 +342,8 @@ global:
   scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
+  external_labels:
+    server_name: prometheus
 
 #Alertmanager configuration
 alerting:
@@ -397,6 +397,15 @@ scrape_configs:
     static_configs:
       - targets:
         - localhost:9090 #put you remote server here
+#   - job_name: node_exporter_multi_node
+#     static_configs:
+# {% for n in range(3400) %}
+#       - targets: ['host-node-{{n}}:9100']
+#         labels:
+#           host_number: cfg_{{n}}
+#           role: node-exporter
+#           env: prod
+# {% endfor %}
 EOF
 sudo cat << EOF > /etc/prometheus/web.yml
 basic_auth_users:
@@ -405,11 +414,69 @@ tls_server_config:
   cert_file: /etc/ssl/tls_prometheus_crt.crt
   key_file: /etc/ssl/tls_prometheus_key.key
 EOF
+sudo chmod 740 /etc/prometheus
+sudo chmod 660 /etc/prometheus/*
 sudo chown --recursive prometheus:prometheus /etc/prometheus
 systemctl daemon-reload
 systemctl enable prometheus.service
 systemctl restart prometheus.service
 systemctl status prometheus.service
+fi
+################### VICTORIAMETRICS #####################################################################################################################################
+if [ "$victoriametrics" == "1" ]; then
+URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest`
+VERSION_NE=${URL_NE##*/}
+wget -O /tmp/victoria-metrics-linux-amd64.tar.gz https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${VERSION_NE}/victoria-metrics-linux-$(dpkg --print-architecture)-${VERSION_NE}.tar.gz
+tar zxvf /tmp/victoria-metrics-linux-amd64.tar.gz -C /usr/local/bin
+rm -rf /tmp/victoria-metrics-linux-amd64.tar.gz
+mkdir /etc/victoriametrics
+cat <<EOF >/etc/victoriametrics/victoriametrics.yml
+scrape_configs:
+  - job_name: prometheus
+    scheme: https
+    basic_auth:
+      username: $observ_user
+      password: $observ_passw
+    tls_config: 
+      ca_file: /etc/ssl/tls_prometheus_crt.crt
+      insecure_skip_verify: true
+    static_configs:
+      - targets:
+        - localhost:9090
+EOF
+sudo cat << EOF > /etc/systemd/system/victoriametrics.service
+[Unit]
+Description=Victoria Metrics
+After=network.target
+[Service]
+# User=prometheus
+# Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/victoria-metrics-prod \
+--promscrape.config=/etc/victoriametrics/victoriametrics.yml \
+--retentionPeriod=15d \
+--httpListenAddr=0.0.0.0:8428 \
+--httpAuth.username=$observ_user \
+--httpAuth.password=$observ_passw \
+--tlsCertFile=/etc/ssl/tls_prometheus_crt.crt \
+--tlsKeyFile=/etc/ssl/tls_prometheus_key.key \
+--tls
+--config.strictParse=false
+[Install]
+WantedBy=multi-user.target
+EOF
+if [ "$prometheus" == "1" ]; then
+cp -f /etc/prometheus/prometheus.yml /etc/victoriametrics/victoriametrics.yml
+fi
+sudo chmod 740 /etc/victoriametrics
+sudo chmod 660 /etc/victoriametrics/*
+mkdir -p /var/lib/victoriametrics
+sudo chown --recursive prometheus:prometheus /var/lib/victoriametrics
+sudo chown --recursive prometheus:prometheus /etc/victoriametrics
+systemctl daemon-reload
+systemctl enable victoriametrics.service
+systemctl restart victoriametrics.service
+systemctl status victoriametrics.service
 fi
 ################### ALERTMANAGER #####################################################################################################################################
 if [[ "$alertmanager" == "1" ]]; then
