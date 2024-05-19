@@ -16,6 +16,19 @@ if [[ "${UID}" -ne 0 ]]; then
 fi
 source config.sh
 source configself.sh
+if [[ "$alternative_repo" == "1" ]]; then
+    touch /etc/apt/sources.list
+    sudo cat << EOF > /etc/apt/sources.list
+deb http://mirror.yandex.ru/debian/ $(lsb_release -cs) main
+deb-src http://mirror.yandex.ru/debian/ $(lsb_release -cs) main
+
+deb http://mirror.yandex.ru/debian-security $(lsb_release -cs)-security main contrib
+deb-src http://mirror.yandex.ru/debian-security $(lsb_release -cs)-security main contrib
+
+deb http://mirror.yandex.ru/debian/ $(lsb_release -cs)-updates main contrib
+deb-src http://mirror.yandex.ru/debian/ $(lsb_release -cs)-updates main contrib
+EOF    
+fi  
 apt-get update
 apt-get install -y --no-install-recommends --no-install-suggests \
   kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils make \
