@@ -40,7 +40,8 @@ terrafom=0
 helm=0
 ##################### Virt
 docker=0
-dockermetrics=0
+dockermetrics=0 
+#metrics bugged
 ##################### Network optimization
 sysctl=1
 ##################### WSL
