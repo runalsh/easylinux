@@ -16,6 +16,7 @@
 Plans:
 
         angie (nginx fork) with proxy and lua modules
+        vault (pki)
         vault warden
         sslh
         stunnel
