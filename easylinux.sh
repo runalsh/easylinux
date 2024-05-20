@@ -17,17 +17,44 @@ fi
 source config.sh
 source configself.sh
 if [[ "$alternative_repo" == "1" ]]; then
+    cp /etc/apt/sources.list /etc/apt/sources.list.bak || true
     touch /etc/apt/sources.list
-    sudo cat << EOF > /etc/apt/sources.list
-deb http://mirror.yandex.ru/debian/ $(lsb_release -cs) main
-deb-src http://mirror.yandex.ru/debian/ $(lsb_release -cs) main
+    if [ "$OS" == "Ubuntu" ]; then 
+      sudo cat << EOF > /etc/apt/sources.list
+      deb http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs) main restricted
+      deb-src http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs) main restricted
+      deb http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs)-updates main restricted
+      deb-src http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs)-updates main restricted
+      deb http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs) universe
+      deb-src http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs) universe
+      deb http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs)-updates universe
+      deb-src http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs)-updates universe
+      deb http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs) multiverse
+      deb-src http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs) multiverse
+      deb http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs)-updates multiverse
+      deb-src http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs)-updates multiverse
+      deb http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs)-backports main restricted universe multiverse
+      deb-src http://mirror.yandex.ru/ubuntu/ $(lsb_release -cs)-backports main restricted universe multiverse
+      deb http://mirror.yandex.ru/ubuntu $(lsb_release -cs)-security main restricted
+      deb-src http://mirror.yandex.ru/ubuntu $(lsb_release -cs)-security main restricted
+      deb http://mirror.yandex.ru/ubuntu $(lsb_release -cs)-security universe
+      deb-src http://mirror.yandex.ru/ubuntu $(lsb_release -cs)-security universe
+      deb http://mirror.yandex.ru/ubuntu $(lsb_release -cs)-security multiverse
+      deb-src http://mirror.yandex.ru/ubuntu $(lsb_release -cs)-security multiverse
+EOF   
+    fi
+    if [ "$OS" == "debian" ]; then 
+      sudo cat << EOF > /etc/apt/sources.list
+      deb http://mirror.yandex.ru/debian/ $(lsb_release -cs) main
+      deb-src http://mirror.yandex.ru/debian/ $(lsb_release -cs) main
 
-deb http://mirror.yandex.ru/debian-security $(lsb_release -cs)-security main contrib
-deb-src http://mirror.yandex.ru/debian-security $(lsb_release -cs)-security main contrib
+      deb http://mirror.yandex.ru/debian-security $(lsb_release -cs)-security main contrib
+      deb-src http://mirror.yandex.ru/debian-security $(lsb_release -cs)-security main contrib
 
-deb http://mirror.yandex.ru/debian/ $(lsb_release -cs)-updates main contrib
-deb-src http://mirror.yandex.ru/debian/ $(lsb_release -cs)-updates main contrib
+      deb http://mirror.yandex.ru/debian/ $(lsb_release -cs)-updates main contrib
+      deb-src http://mirror.yandex.ru/debian/ $(lsb_release -cs)-updates main contrib
 EOF    
+    fi
 fi  
 apt-get update
 apt-get install -y --no-install-recommends --no-install-suggests \
@@ -1096,6 +1123,10 @@ systemctl status nebula
 # nebula-cert sign -name node5 -ip "192.168.10.5/24"
 
 fi
+################### ANGIE #####################################################################################################################################
+
+
+
 ################### END #####################################################################################################################################
 rm -rf /tmp/*
 apt {clean,autoclean}

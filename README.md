@@ -12,7 +12,7 @@
         Certbot: letsencrypt sslip.io/nip.io or/and own cloudflare domain
         Services: torrserver, rustdesk
         Other tools: micro, tmux, nmon, python3, fail2ban ...
-        Alternative repo for tailscale and hashicorp which block Russian ips, yandex repo for debian 
+        Alternative repo for tailscale and hashicorp which block Russian ips, yandex repo for debian and ubuntu
 Plans:
 
         angie (nginx fork) with proxy and lua modules
