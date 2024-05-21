@@ -15,14 +15,12 @@
         Alternative repo for tailscale and hashicorp which block Russian ips, yandex repo for debian and ubuntu
 Plans:
 
-        angie (nginx fork) with proxy and lua modules
-        vault (pki)
+        angie (nginx fork) with proxy_connect and lua modules + console
+        all observability services throu angie
+        vault (pki+secrets) service between few hosts, service discovery consul
         vault warden
-        sslh
-        stunnel
-        dumbproxy
-        3proxy
-        shadowsocks + v2ray\xray
+        rugovblock
+        sslh stunnel dumbproxy 3proxy shadowsocks + v2ray\xray
 
 Configure in config.sh or create configself.sh
 

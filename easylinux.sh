@@ -245,15 +245,18 @@ if [[ "$docker" == "1" ]]; then
 curl -fsSL https://get.docker.com -o get-docker.sh
 sed -i '/sleep/d' get-docker.sh
 DEBIAN_FRONTEND=noninteractive sudo sh ./get-docker.sh
-#   if [[ "$dockermetrics" == "1" ]]; then
-#     mkdir -p /etc/docker
-#     sudo cat << EOF > /etc/docker/daemon.json
-# {
-#   "experimental" : true,
-#   "metrics-addr": ["127.0.0.1:9323"
-#     ]
-# }
-# EOF    
+  if [[ "$dockermetrics" == "1" ]]; then
+    mkdir -p /etc/docker
+    sudo cat << EOF > /etc/docker/daemon.json
+    {
+      "experimental" : true,
+      "metrics-addr": "127.0.0.1:9323"
+    }
+EOF
+    if [[ "$tailscale" == "1" ]]; then
+      ts_docker=$(ifconfig | awk '/tailscale0:/ {getline; if ($1 == "inet") print $2}')
+      sed -i "s/127.0.0.1:9323/$ts_docker:9323/" /etc/docker/daemon.json 
+    fi
 #     if [[ "$tailscale" == "1" ]]; then
 #       ts_docker=$(ifconfig | awk '/tailscale0:/ {getline; if ($1 == "inet") print $2}')
 #       sed -i "/"127.0.0.1:9323"/s/$/, "$ts_docker:2375"/" /etc/docker/daemon.json
@@ -274,7 +277,7 @@ DEBIAN_FRONTEND=noninteractive sudo sh ./get-docker.sh
 #       sed -i "/"127.0.0.1:9323"/s/$/, "$neb_docker:2375"/" /etc/docker/daemon.json
 #       sed -i "s|ExecStart=/usr/bin/dockerd|ExecStart=/usr/bin/dockerd -H tcp://$neb_docker:2375|" /etc/systemd/system/multi-user.target.wants/docker.service
 #     fi
-#   fi
+  fi
 fi
 ################### OBSERVABILITY CERTS #####################################################################################################################################
 if [[ "$node_exporter" == "1" ]] || [[ "$prometheus" == "1" ]] || [[ "$alertmanager" == "1" ]] || [[ "$cadvisor" == "1" ]] || [[ "$victoriametrics" == "1" ]]; then
