@@ -277,7 +277,7 @@ DEBIAN_FRONTEND=noninteractive sudo sh ./get-docker.sh
 #   fi
 fi
 ################### OBSERVABILITY CERTS #####################################################################################################################################
-if [[ "$node_exporter" == "1" ]] || [[ "$prometheus" == "1" ]] || [[ "$alertmanager" == "1" ]]; then
+if [[ "$node_exporter" == "1" ]] || [[ "$prometheus" == "1" ]] || [[ "$alertmanager" == "1" ]] || [[ "$cadvisor" == "1" ]] || [[ "$victoriametrics" == "1" ]]; then
 observ_passw_hash=$(echo $observ_passw | htpasswd -inBC 10 "" | tr -d ':\n')
 # openssl genrsa -out /etc/ssl/tls_prometheus_key.key 2048
 # openssl req -new -key /etc/ssl/tls_prometheus_key.key -out /etc/ssl/tls_prometheus_csr.csr -subj "/CN=`hostname`" \-addext "subjectAltName = DNS:`hostname`"
@@ -336,7 +336,7 @@ sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 systemctl daemon-reload
 systemctl enable node_exporter.service
 systemctl restart node_exporter.service
-systemctl status node_exporter.service
+systemctl status node_exporter.service  --no-pager
 fi
 ################### PROMETHEUS #####################################################################################################################################
 if [[ "$prometheus" == "1" ]]; then
@@ -460,13 +460,13 @@ sudo chown --recursive prometheus:prometheus /etc/prometheus
 systemctl daemon-reload
 systemctl enable prometheus.service
 systemctl restart prometheus.service
-systemctl status prometheus.service
+systemctl status prometheus.service --no-pager
 fi
 ################### VICTORIAMETRICS #####################################################################################################################################
 if [ "$victoriametrics" == "1" ]; then
-URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest`
-VERSION_NE=${URL_NE##*/}
-wget -O /tmp/victoria-metrics-linux-amd64.tar.gz https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${VERSION_NE}/victoria-metrics-linux-$(dpkg --print-architecture)-${VERSION_NE}.tar.gz
+URL_VM=`curl -sL -o /dev/null -w %{url_effective} https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest`
+VERSION_VM=${URL_VM##*/}
+wget -O /tmp/victoria-metrics-linux-amd64.tar.gz https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${VERSION_VM}/victoria-metrics-linux-$(dpkg --print-architecture)-${VERSION_VM}.tar.gz
 tar zxvf /tmp/victoria-metrics-linux-amd64.tar.gz -C /usr/local/bin
 rm -rf /tmp/victoria-metrics-linux-amd64.tar.gz
 mkdir /etc/victoriametrics
@@ -516,14 +516,14 @@ sudo chown --recursive prometheus:prometheus /etc/victoriametrics
 systemctl daemon-reload
 systemctl enable victoriametrics.service
 systemctl restart victoriametrics.service
-systemctl status victoriametrics.service
+systemctl status victoriametrics.service --no-pager
 fi
 ################### ALERTMANAGER #####################################################################################################################################
 if [[ "$alertmanager" == "1" ]]; then
-URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/alertmanager/releases/latest`
-VERSION_NE=${URL_NE##*/}
+URL_AM=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/alertmanager/releases/latest`
+VERSION_AM=${URL_AM##*/}
 rm -rf /tmp/alertmanager.tar.gz
-wget -O /tmp/alertmanager.tar.gz https://github.com/prometheus/alertmanager/releases/download/${VERSION_NE}/alertmanager-${VERSION_NE#v}.linux-$(dpkg --print-architecture).tar.gz
+wget -O /tmp/alertmanager.tar.gz https://github.com/prometheus/alertmanager/releases/download/${VERSION_AM}/alertmanager-${VERSION_AM#v}.linux-$(dpkg --print-architecture).tar.gz
 mkdir -p /usr/local/alertmanager
 tar zxvf /tmp/alertmanager.tar.gz -C /usr/local/alertmanager --strip-components=1
 rm -rf /tmp/alertmanager.tar.gz
@@ -742,18 +742,18 @@ sudo chown --recursive alertmanager:alertmanager /etc/alertmanager
 systemctl daemon-reload
 systemctl enable alertmanager.service
 systemctl restart alertmanager.service
-systemctl status alertmanager.service
+systemctl status alertmanager.service --no-pager
 fi
 ################### cadvisor #####################################################################################################################################
 if [[ "$cadvisor" == "1" ]]; then
-URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/google/cadvisor/releases/latest`
-VERSION_NE=${URL_NE##*/}
-rm -rf /tmp/cadvisor
-wget -O /tmp/cadvisor https://github.com/google/cadvisor/releases/download/${VERSION_NE}/cadvisor-v${VERSION_NE#v}-linux-$(dpkg --print-architecture)
+URL_CA=`curl -sL -o /dev/null -w %{url_effective} https://github.com/google/cadvisor/releases/latest`
+VERSION_CA=${URL_CA##*/}
+wget -O /tmp/cadvisor https://github.com/google/cadvisor/releases/download/${VERSION_CA}/cadvisor-v${VERSION_CA#v}-linux-$(dpkg --print-architecture)
 mkdir -p /usr/local/cadvisor
-mv --force /tmp/cadvisor /usr/local/cadvisor/cadvisor
+mv --force /tmp/cadvisor /usr/local/cadvisor
 chmod +x /usr/local/cadvisor/cadvisor
 ln -s /usr/local/cadvisor/cadvisor /usr/local/bin/cadvisor
+rm -rf /tmp/cadvisor
 useradd --no-create-home --shell /bin/false cadvisor
 sudo cat << EOF > /etc/systemd/system/cadvisor.service
 [Unit]
@@ -783,8 +783,74 @@ chown cadvisor /var/run/docker.sock
 systemctl daemon-reload
 systemctl enable cadvisor.service
 systemctl restart cadvisor.service
-systemctl status cadvisor.service
+systemctl status cadvisor.service --no-pager
 fi
+################### UPDATER #############################################################################################################################
+
+mkdir -p /etc/cron.weekly
+cat << EOF > /etc/cron.weekly/upgrader.sh
+apt update && apt upgrade -y && apt autoremove -y && apt clean && apt autoclean 
+EOF
+
+cat << EOF > /etc/cron.weekly/observupdater.sh
+URL_PROM=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/prometheus/releases/latest`
+VERSION_PROM=${URL_PROM##*/}
+rm -rf /tmp/prometheus.tar.gz
+wget -O /tmp/prometheus.tar.gz https://github.com/prometheus/prometheus/releases/download/${VERSION_PROM}/prometheus-${VERSION_PROM#v}.linux-$(dpkg --print-architecture).tar.gz
+mkdir -p /usr/local/prometheus
+tar zxvf /tmp/prometheus.tar.gz -C /usr/local/prometheus  --strip-components=1
+rm -rf /tmp/prometheus.tar.gz
+rm -rf /usr/local/bin/prometheus
+ln -s /usr/local/prometheus/prometheus /usr/local/bin/prometheus
+systemctl restart prometheus.service
+
+URL_NE=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/node_exporter/releases/latest`
+VERSION_NE=${URL_NE##*/}
+rm -rf /tmp/node_exporter.tar.gz
+wget -O /tmp/node_exporter.tar.gz https://github.com/prometheus/node_exporter/releases/download/${VERSION_NE}/node_exporter-${VERSION_NE#v}.linux-$(dpkg --print-architecture).tar.gz
+mkdir -p /usr/local/node_exporter
+tar zxvf /tmp/node_exporter.tar.gz -C /usr/local/node_exporter --strip-components=1
+rm -rf /tmp/node_exporter.tar.gz
+rm -rf /usr/local/bin/node_exporter
+ln -s /usr/local/node_exporter/node_exporter /usr/local/bin/node_exporter
+systemctl restart node_exporter.service
+
+URL_VM=`curl -sL -o /dev/null -w %{url_effective} https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest`
+VERSION_VM=${URL_VM##*/}
+wget -O /tmp/victoria-metrics-linux-amd64.tar.gz https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${VERSION_VM}/victoria-metrics-linux-$(dpkg --print-architecture)-${VERSION_VM}.tar.gz
+tar zxvf /tmp/victoria-metrics-linux-amd64.tar.gz -C /usr/local/bin
+rm -rf /tmp/victoria-metrics-linux-amd64.tar.gz
+systemctl restart victoriametrics.service
+
+URL_AM=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/alertmanager/releases/latest`
+VERSION_AM=${URL_AM##*/}
+rm -rf /tmp/alertmanager.tar.gz
+wget -O /tmp/alertmanager.tar.gz https://github.com/prometheus/alertmanager/releases/download/${VERSION_AM}/alertmanager-${VERSION_AM#v}.linux-$(dpkg --print-architecture).tar.gz
+mkdir -p /usr/local/alertmanager
+tar zxvf /tmp/alertmanager.tar.gz -C /usr/local/alertmanager --strip-components=1
+rm -rf /tmp/alertmanager.tar.gz
+systemctl restart alertmanager.service
+
+URL_CA=`curl -sL -o /dev/null -w %{url_effective} https://github.com/google/cadvisor/releases/latest`
+VERSION_CA=${URL_CA##*/}
+wget -O /tmp/cadvisor https://github.com/google/cadvisor/releases/download/${VERSION_CA}/cadvisor-v${VERSION_CA#v}-linux-$(dpkg --print-architecture)
+mkdir -p /usr/local/cadvisor
+mv --force /tmp/cadvisor /usr/local/cadvisor/cadvisor
+chmod +x /usr/local/cadvisor/cadvisor
+rm -rf /usr/local/bin/cadvisor
+ln -s /usr/local/cadvisor/cadvisor /usr/local/bin/cadvisor
+rm -rf /tmp/cadvisor
+systemctl restart cadvisor.service
+
+sleep 5
+
+systemctl status prometheus.service --no-pager
+systemctl status node_exporter.service --no-pager
+systemctl status victoriametrics.service --no-pager
+systemctl status alertmanager.service --no-pager
+systemctl status cadvisor.service --no-pager
+EOF
+chmod +x /etc/cron.weekly/observupdater.sh
 
 ################### HELM #####################################################################################################################################
 if [[ "$helm" == "1" ]]; then
@@ -1113,7 +1179,7 @@ EOF
 
 systemctl enable nebula
 systemctl start nebula
-systemctl status nebula
+systemctl status nebula --no-pager
 
 # nebula-cert ca -name 'runalsh inc'
 # nebula-cert sign -name lighthouse -ip "192.168.10.1/24"
