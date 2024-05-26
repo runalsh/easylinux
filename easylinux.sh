@@ -339,6 +339,7 @@ sudo chown --recursive node_exporter:node_exporter /etc/node_exporter
 systemctl daemon-reload
 systemctl enable node_exporter.service
 systemctl restart node_exporter.service
+sleep 5
 systemctl status node_exporter.service  --no-pager
 fi
 ################### PROMETHEUS #####################################################################################################################################
@@ -463,6 +464,7 @@ sudo chown --recursive prometheus:prometheus /etc/prometheus
 systemctl daemon-reload
 systemctl enable prometheus.service
 systemctl restart prometheus.service
+sleep 5
 systemctl status prometheus.service --no-pager
 fi
 ################### VICTORIAMETRICS #####################################################################################################################################
@@ -519,6 +521,7 @@ sudo chown --recursive prometheus:prometheus /etc/victoriametrics
 systemctl daemon-reload
 systemctl enable victoriametrics.service
 systemctl restart victoriametrics.service
+sleep 5
 systemctl status victoriametrics.service --no-pager
 fi
 ################### ALERTMANAGER #####################################################################################################################################
@@ -745,6 +748,7 @@ sudo chown --recursive alertmanager:alertmanager /etc/alertmanager
 systemctl daemon-reload
 systemctl enable alertmanager.service
 systemctl restart alertmanager.service
+sleep 5
 systemctl status alertmanager.service --no-pager
 fi
 ################### cadvisor #####################################################################################################################################
@@ -786,6 +790,7 @@ chown cadvisor /var/run/docker.sock
 systemctl daemon-reload
 systemctl enable cadvisor.service
 systemctl restart cadvisor.service
+sleep 5
 systemctl status cadvisor.service --no-pager
 fi
 ################### UPDATER #############################################################################################################################
@@ -949,14 +954,28 @@ EOF
 source ~/.bashrc
 fi
 ################### LOGS #####################################################################################################################################
+mv /etc/logrotate.conf /etc/logrotate.conf.bak
 echo "
+daily
+compress
+rotate 0
+daily
 /var/log/btmp {
     missingok
     daily
     create 0660 root utmp
-    rotate 1
+	compress
+    rotate 0
 }
-" > /etc/logrotate.d/btmp
+/var/log/wtmp {
+    missingok
+    daily
+    create 0660 root utmp
+	compress
+    rotate 0
+}
+" > /etc/logrotate.conf
+logrotate -d /etc/logrotate.conf
 service logrotate restart
 
 echo "Compress=yes
