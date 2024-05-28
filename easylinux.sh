@@ -507,6 +507,7 @@ ExecStart=/usr/local/bin/victoria-metrics-prod \
 --tlsKeyFile=/etc/ssl/tls_prometheus_key.key \
 --tls
 --config.strictParse=false
+--storageDataPath=/var/lib/victoriametrics
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -523,6 +524,84 @@ systemctl enable victoriametrics.service
 systemctl restart victoriametrics.service
 sleep 5
 systemctl status victoriametrics.service --no-pager
+fi
+################### PUSHGATEWAY #####################################################################################################################################
+
+################### VMAGENT (VICTORIAMETRICS) #####################################################################################################################################
+
+if [ "$victoriametrics_agent" == "1" ]; then
+
+URL_VMU=`curl -sL -o /dev/null -w %{url_effective} https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest`
+VERSION_VMU=${URL_VMU##*/}
+wget -O /tmp/vmutils-linux-amd64.tar.gz https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${VERSION_VMU}/vmutils-linux-$(dpkg --print-architecture)-${VERSION_VMU}.tar.gz
+mkdir -p /usr/local/bin/victoriametrics-utils
+tar zxvf /tmp/vmutils-linux-amd64.tar.gz -C /usr/local/bin/victoriametrics-utils
+rm -rf /tmp/vmutils-linux-amd64.tar.gz
+mkdir /etc/victoriametrics-utils
+
+sudo cat << EOF > /etc/victoriametrics-utils/vmagent.yml
+vmagent_global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+vmagent_scrape_configs:
+  - job_name: my_application
+    scheme: https
+    metrics_path: /metrics
+    basic_auth:
+      username: $observ_user
+      password: $observ_passw
+    tls_config: 
+      ca_file: /etc/ssl/tls_prometheus_crt.crt
+      insecure_skip_verify: true
+    # params:
+    #   match[]:
+    #     - '{job=~".+"}'
+    static_configs:
+      - targets: 
+          - localhost:8888  #app with p8s page
+vmagent_remote_write:
+  - url: "http://<pushgateway>:9091/metrics/job/my_app/instance/host123"
+# it will be {job="my_app",instance="host123"}
+# if push to VM use http://localhost:8428/api/v1/write
+# for more look https://docs.victoriametrics.com/single-server-victoriametrics/#how-to-import-data-in-prometheus-exposition-format
+EOF
+sudo cat << EOF > /etc/victoriametrics-utils/vmagent.yml
+[Unit]
+Description=Victoria Metrics - VMAgent
+Documentation=https://github.com/VictoriaMetrics/VictoriaMetrics
+[Service]
+# User=prometheus
+# Group=prometheus
+[Service]
+ExecStart=/usr/local/bin/vmagent-prod -config.file=/etc/victoriametrics-utils/vmagent.yml \
+--remoteWrite.tmpDataPath=/var/lib/victoriametrics-vmagent \
+--remoteWrite.basicAuth.username=$observ_user \
+--remoteWrite.basicAuth.password=$observ_passw \
+--httpListenAddr=":${VMAGENT_HTTP_PORT:-8429}"  \
+--remoteWrite.maxDiskUsagePerURL="${VMAGENT_MAX_DISK_USAGE:-256MB}" \
+--httpAuth.username=$observ_user \
+--httpAuth.password=$observ_passw \
+--tlsCertFile=/etc/ssl/tls_prometheus_crt.crt \
+--tlsKeyFile=/etc/ssl/tls_prometheus_key.key \
+--tls
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo chmod 740 /etc/victoriametrics-utils
+sudo chmod 660 /etc/victoriametrics-utils/*
+mkdir -p /var/lib/victoriametrics-vmagent 
+sudo chown --recursive prometheus:prometheus /var/lib/victoriametrics-vmagent 
+sudo chown --recursive prometheus:prometheus /etc/victoriametrics-utils
+systemctl daemon-reload
+systemctl enable victoriametrics-vmagent.service
+systemctl restart victoriametrics-vmagent.service
+sleep 5
+systemctl status victoriametrics-vmagent.service --no-pager
+
 fi
 ################### ALERTMANAGER #####################################################################################################################################
 if [[ "$alertmanager" == "1" ]]; then

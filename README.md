@@ -13,8 +13,10 @@
         Services: torrserver, rustdesk
         Other tools: micro, tmux, nmon, python3, fail2ban ...
         Alternative repo for tailscale and hashicorp which block Russian ips, yandex repo for debian and ubuntu
+        Vmagent (victoriametrics utils)
 Plans:
 
+        pushgateway
         angie (nginx fork) with proxy_connect and lua modules + console
         all observability services throu angie
         vault (pki+secrets) service between few hosts, service discovery consul
