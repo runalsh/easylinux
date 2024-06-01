@@ -1603,8 +1603,6 @@ wget -O /tmp/etcd-linux-amd64.tar.gz  https://github.com/coreos/etcd/releases/do
 mkdir -p /usr/local/etcd
 tar xzvf /tmp/etcd-linux-amd64.tar.gz -C /usr/local/etcd --strip-components=1
 
-ETCD_DISCOVERY=https://discovery.etcd.io/63ec7c07688bd29fafd4a4fdf19f8a7br
-
 mkdir -p /tmp/etcd-certs
 curl -L https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 -o /tmp/cfssl
 chmod +x /tmp/cfssl
@@ -1612,6 +1610,86 @@ sudo mv /tmp/cfssl /usr/local/bin/cfssl
 curl -L https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 -o /tmp/cfssljson
 chmod +x /tmp/cfssljson
 sudo mv /tmp/cfssljson /usr/local/bin/cfssljson
+
+mkdir -p /tmp/etcd-certs
+cat > /tmp/etcd-certs/etcd-root-ca-csr.json <<EOF
+{
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "O": "etcd",
+      "OU": "etcd Security",
+      "L": "San Francisco",
+      "ST": "California",
+      "C": "USA"
+    }
+  ],
+  "CN": "etcd-root-ca"
+}
+EOF
+cfssl gencert --initca=true /tmp/etcd-certs/etcd-root-ca-csr.json | cfssljson --bare /tmp/etcd-certs/etcd-root-ca
+# verify
+openssl x509 -in /tmp/etcd-certs/etcd-root-ca.pem -text -noout
+# cert-generation configuration
+cat > /tmp/etcd-certs/etcd-gencert.json <<EOF
+{
+  "signing": {
+    "default": {
+        "usages": [
+          "signing",
+          "key encipherment",
+          "server auth",
+          "client auth"
+        ],
+        "expiry": "87600h"
+    }
+  }
+}
+EOF
+
+mkdir -p /tmp/etcd-certs
+cat > /tmp/etcd-certs/s1-ca-csr.json <<EOF
+{
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "O": "etcd",
+      "OU": "etcd Security",
+      "L": "San Francisco",
+      "ST": "California",
+      "C": "USA"
+    }
+  ],
+  "CN": "s1",
+  "hosts": [
+    "127.0.0.1",
+    "localhost",
+    "*.svc.cluster.local",
+    "*.svc",
+    "*.local",
+    "*.example.com",
+    "*.sslip.io",
+    "*.nip.io"
+  ]
+}
+EOF
+cfssl gencert \
+  --ca /tmp/etcd-certs/etcd-root-ca.pem \
+  --ca-key /tmp/etcd-certs/etcd-root-ca-key.pem \
+  --config /tmp/etcd-certs/etcd-gencert.json \
+  /tmp/etcd-certs/s1-ca-csr.json | cfssljson --bare /tmp/etcd-certs/s1
+# verify
+openssl x509 -in /tmp/etcd-certs/s1.pem -text -noout
+
+mkdir -p /etc/etcd/certs
+cp /tmp/certs/* /etc/etcd/certs
+
 cat > /tmp/s1.service <<EOF
 [Unit]
 Description=etcd
@@ -1626,13 +1704,13 @@ RestartSec=5s
 LimitNOFILE=40000
 TimeoutStartSec=0
 
-ExecStart=/tmp/test-etcd/etcd --name s1 \
+ExecStart=/usr/local/etcd/etcd --name s1 \
   --data-dir /etc/etcd/s1 \
   --listen-client-urls https://localhost:2379 \
   --advertise-client-urls https://localhost:2379 \
   --listen-peer-urls https://localhost:2380 \
   --initial-advertise-peer-urls https://localhost:2380 \
-  --initial-cluster s1=https://localhost:2380,s2=https://localhost:22380,s3=https://localhost:32380 \
+  --initial-cluster s1=https://localhost:2380,s2=https://localhost:2380,s3=https://localhost:2380 \
   --initial-cluster-token tkn \
   --initial-cluster-state new \
   --client-cert-auth \
@@ -1644,7 +1722,11 @@ ExecStart=/tmp/test-etcd/etcd --name s1 \
   --peer-cert-file /etc/etcd/certs/s1.pem \
   --peer-key-file /etc/etcd/certs/s1-key.pem \
   --enable-pprof
-
+# ExecStart=/usr/local/etcd/etcd --name infra0 --initial-advertise-peer-urls http://10.0.1.10:2380 \
+#   --listen-peer-urls http://10.0.1.10:2380 \
+#   --listen-client-urls http://10.0.1.10:2379,http://127.0.0.1:2379 \
+#   --advertise-client-urls http://10.0.1.10:2379 \
+#   --discovery $etcd_discovery
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -1660,8 +1742,16 @@ sudo systemctl status s1.service -l --no-pager
 sudo journalctl -u s1.service -l --no-pager|less
 sudo journalctl -f -u s1.service
 
-sudo systemctl stop s1.service
-sudo systemctl disable s1.service
+# sudo systemctl stop s1.service
+# sudo systemctl disable s1.service
+
+# check health
+ETCDCTL_API=3 /tmp/test-etcd/etcdctl \
+  --endpoints localhost:2379,localhost:2379,localhost:2379 \
+  --cacert /etc/etcd/certs/etcd-root-ca.pem \
+  --cert /etc/etcd/certs/s1.pem \
+  --key /etc/etcd/certs/s1-key.pem \
+  endpoint health
 fi
 # cert http://play.etcd.io/install
 # complete https://etcd.io/docs/v3.4/op-guide/clustering/#etcd-discovery
