@@ -34,5 +34,6 @@ Configure in config.sh or create configself.sh
 If you add own .sh scripts dont forget 'git add --chmod=+x -- *.sh'
 
 Q: Why use a bash script instead of Ansible? It would be more compact and understandable that way.
+
 A: The project started as a small help for the initial and quick setup of the operating system, no more than 50-100 lines of code with minimal necessary functionality. But it gradually grew to 1800 lines...
 
