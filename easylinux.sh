@@ -250,7 +250,11 @@ DEBIAN_FRONTEND=noninteractive sudo sh ./get-docker.sh
     sudo cat << EOF > /etc/docker/daemon.json
     {
       "experimental" : true,
-      "metrics-addr": "127.0.0.1:9323"
+      "metrics-addr": "127.0.0.1:9323",
+      "log-driver": "json-file",
+      "log-opts": {
+        "labels-regex": "^.+"
+      }
     }
 EOF
     if [[ "$tailscale" == "1" ]]; then
@@ -280,7 +284,7 @@ EOF
   fi
 fi
 ################### OBSERVABILITY CERTS #####################################################################################################################################
-if [[ "$node_exporter" == "1" ]] || [[ "$prometheus" == "1" ]] || [[ "$alertmanager" == "1" ]] || [[ "$cadvisor" == "1" ]] || [[ "$victoriametrics" == "1" ]]; then
+if [[ "$node_exporter" == "1" ]] || [[ "$prometheus" == "1" ]] || [[ "$alertmanager" == "1" ]] || [[ "$cadvisor" == "1" ]] || [[ "$victoriametrics" == "1" ]] || [[ "$loki" == "1" ]] || [[ "$promtail" == "1" ]] || [[ "$victoriametrics_agent" == "1" ]]; then
 observ_passw_hash=$(echo $observ_passw | htpasswd -inBC 10 "" | tr -d ':\n')
 # openssl genrsa -out /etc/ssl/tls_prometheus_key.key 2048
 # openssl req -new -key /etc/ssl/tls_prometheus_key.key -out /etc/ssl/tls_prometheus_csr.csr -subj "/CN=`hostname`" \-addext "subjectAltName = DNS:`hostname`"
@@ -340,7 +344,7 @@ systemctl daemon-reload
 systemctl enable node_exporter.service
 systemctl restart node_exporter.service
 sleep 5
-systemctl status node_exporter.service  --no-pager
+systemctl status node_exporter.service  --no-pager -l
 fi
 ################### PROMETHEUS #####################################################################################################################################
 if [[ "$prometheus" == "1" ]]; then
@@ -465,7 +469,7 @@ systemctl daemon-reload
 systemctl enable prometheus.service
 systemctl restart prometheus.service
 sleep 5
-systemctl status prometheus.service --no-pager
+systemctl status prometheus.service --no-pager -l
 fi
 ################### VICTORIAMETRICS #####################################################################################################################################
 if [ "$victoriametrics" == "1" ]; then
@@ -523,7 +527,7 @@ systemctl daemon-reload
 systemctl enable victoriametrics.service
 systemctl restart victoriametrics.service
 sleep 5
-systemctl status victoriametrics.service --no-pager
+systemctl status victoriametrics.service --no-pager -l
 fi
 ################### PUSHGATEWAY #####################################################################################################################################
 
@@ -600,7 +604,7 @@ systemctl daemon-reload
 systemctl enable victoriametrics-vmagent.service
 systemctl restart victoriametrics-vmagent.service
 sleep 5
-systemctl status victoriametrics-vmagent.service --no-pager
+systemctl status victoriametrics-vmagent.service --no-pager -l
 
 fi
 ################### ALERTMANAGER #####################################################################################################################################
@@ -828,7 +832,7 @@ systemctl daemon-reload
 systemctl enable alertmanager.service
 systemctl restart alertmanager.service
 sleep 5
-systemctl status alertmanager.service --no-pager
+systemctl status alertmanager.service --no-pager -l
 fi
 ################### cadvisor #####################################################################################################################################
 if [[ "$cadvisor" == "1" ]]; then
@@ -870,7 +874,7 @@ systemctl daemon-reload
 systemctl enable cadvisor.service
 systemctl restart cadvisor.service
 sleep 5
-systemctl status cadvisor.service --no-pager
+systemctl status cadvisor.service --no-pager -l
 fi
 
 ################### LOKI #####################################################################################################################################
@@ -881,6 +885,8 @@ wget -O /tmp/loki.deb https://github.com/grafana/loki/releases/download/${VERSIO
 dpkg -i /tmp/loki.deb
 rm -rf /tmp/loki.deb
 mkdir -p /var/lib/loki
+mkdir -p /etc/loki
+sed -i 's/^User=loki/#User=loki/' /etc/systemd/system/multi-user.target.wants/loki.service
 cat << EOF > /etc/loki/config.yml
 auth_enabled: false
 
@@ -923,14 +929,14 @@ limits_config:
   retention_period: 7d # days to delete old logs, you can change
   max_query_lookback: 7d # days to delete old logs, you can change
 
-ruler:
-  alertmanager_url: http://localhost:9093
-  alertmanager_client:
-    tls_cert_path: /etc/ssl/tls_prometheus_crt.crt
-    tls_key_path:/etc/ssl/tls_prometheus_key.key
-    tls_insecure_skip_verify: true
-    basic_auth_username: $observ_user
-    basic_auth_password: $observ_passw 
+# ruler:
+#   alertmanager_url: http://localhost:9093
+# alertmanager_client:
+ #   tls_cert_path: /etc/ssl/tls_prometheus_crt.crt
+ #   tls_key_path:/etc/ssl/tls_prometheus_key.key
+ #   tls_insecure_skip_verify: true
+ #   basic_auth_username: $observ_user
+ #   basic_auth_password: $observ_passw 
 
 analytics:
   reporting_enabled: false
@@ -953,7 +959,179 @@ systemctl daemon-reload
 systemctl enable loki.service
 systemctl restart loki.service
 sleep 5
-systemctl status loki.service --no-pager
+systemctl status loki.service --no-pager -l
+fi
+
+################### PROMTAIL #####################################################################################################################################
+if [[ "$promtail" == "1" ]]; then
+URL_LOKI=`curl -sL -o /dev/null -w %{url_effective} https://github.com/grafana/loki/releases/latest`
+VERSION_LOKI=${URL_LOKI##*/}
+wget -O /tmp/promtail.deb https://github.com/grafana/loki/releases/download/${VERSION_LOKI}/promtail_${VERSION_LOKI#v}_$(dpkg --print-architecture).deb
+dpkg -i /tmp/promtail.deb
+rm -rf /tmp/promtail.deb
+mkdir -p /var/lib/promtail
+mkdir -p /etc/promtail
+sed -i 's/^User=promtail/#User=promtail/' /etc/systemd/system/multi-user.target.wants/promtail.service
+cat << EOF > /etc/promtail/config.yml
+server:
+  http_listen_port: 9080
+  http_listen_address: 127.0.0.1
+  grpc_listen_port: 0
+  http_tls_config:
+    cert_file: "/etc/ssl/tls_prometheus_crt.crt"
+    key_file: "/etc/ssl/tls_prometheus_key.key"
+
+positions:
+  filename: /tmp/promtail-positions.yaml
+
+clients:
+- url: https://127.0.0.1:3100/loki/api/v1/push
+  # basic_auth:
+  # username: <string>
+  # password: <string>
+  # password_file: <filename>
+  tls_config:
+    cert_file: "/etc/ssl/tls_prometheus_crt.crt"
+    key_file: "/etc/ssl/tls_prometheus_key.key"
+    insecure_skip_verify: true
+
+scrape_configs:
+
+# - job_name: system
+#   static_configs:
+#   - targets:
+#       - localhost
+#     labels:
+#       job: varlogs
+#       host: aeza
+#       #NOTE: Need to be modified to scrape any additional logs of the system.
+#       __path__: /var/log/messages
+
+#https://voidquark.com/blog/promtail-grafana-dashboard/
+# should be as from prometheus yml - job_name: aeza_promtail_stats =job: aeza_promtail_stats
+- job_name: journal-systemd-promtail
+  journal:
+      json: false
+      max_age: 1h
+      labels:
+        host: aeza
+        job: aeza_promtail_stats
+  relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: 'unit'
+      - source_labels: ['__journal__systemd_unit']
+        action: keep
+        regex: 'promtail.service'
+- job_name: journal_system
+  journal:
+      max_age: 12h
+      labels:
+        job: aeza_promtail_stats
+        host: aeza
+  relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: 'unit'
+# - job_name: syslog
+#   syslog:
+#       listen_address: 0.0.0.0:514
+#       idle_timeout: 60s
+#       label_structured_data: yes
+#       labels:
+#         job: "syslog"
+#   relabel_configs:
+#       - source_labels: ['__syslog_connection_ip_address']
+#         target_label: 'ip'
+#       - source_labels: ['__syslog_connection_hostname']
+#         target_label: 'host'
+#       - source_labels: ['__syslog_message_severity']
+#         target_label: 'severity'
+#       - source_labels: ['__syslog_message_facility']
+#         target_label: 'facility'
+#       - source_labels: ['__syslog_message_hostname']
+#         target_label: 'source'
+#       - source_labels: ['__syslog_message_app_name']
+#         target_label: 'appname'
+#       - source_labels: ['__syslog_message_proc_id']
+#         target_label: 'procid'
+#       - source_labels: ['__syslog_message_msg_id']
+#         target_label: 'msgid'
+
+- job_name: system_varlogs
+  static_configs:
+    - targets:
+        - localhost
+      labels:
+        job: aeza_promtail_stats
+        host: aeza
+        __path__: /var/log/*log
+    - targets:
+        - localhost
+      labels:
+        job: aeza_promtail_stats
+        host: aeza
+        __path__: /var/log/*/*log
+
+- job_name: containers_logs
+  static_configs:
+  - targets:
+      - localhost
+    labels:
+      job: aeza_promtail_stats
+      host: aeza
+      # node_hostname: "${HOST_HOSTNAME}" # remove line if you do not use docker swarm
+      __path__: /var/lib/docker/containers/*/*log
+  pipeline_stages:
+  - json:
+      expressions:
+        log: log
+        stream: stream
+        time: time
+        tag: attrs.tag
+        # docker compose
+        compose_project: attrs."com.docker.compose.project"
+        compose_service: attrs."com.docker.compose.service"
+        # docker swarm
+        stack_name: attrs."com.docker.stack.namespace"
+        service_name: attrs."com.docker.swarm.service.name"
+        service_id: attrs."com.docker.swarm.service.id"
+        task_name: attrs."com.docker.swarm.task.name"
+        task_id: attrs."com.docker.swarm.task.id"
+        node_id: attrs."com.docker.swarm.node.id"
+  - regex:
+      expression: "^/var/lib/docker/containers/(?P<container_id>.{12}).+/.+-json.log$"
+      source: filename
+  - timestamp:
+      format: RFC3339Nano
+      source: time
+  - labels:
+      stream:
+      container_id:
+      tag:
+      # docker compose
+      compose_project:
+      compose_service:
+      # docker swarm
+      stack_name:
+      service_name:
+      service_id:
+      task_name:
+      task_id:
+      node_id:
+  - output:
+      source: log      
+
+EOF
+if [[ "$tailscale" == "1" ]]; then
+  ts_docker=$(ifconfig | awk '/tailscale0:/ {getline; if ($1 == "inet") print $2}')
+  sed -i "s/127.0.0.1/$ts_docker/" /etc/promtail/config.yml
+fi
+sudo chown --recursive promtail /etc/promtail
+sudo chown --recursive promtail /var/lib/promtail
+systemctl daemon-reload
+systemctl enable promtail.service
+systemctl restart promtail.service
+sleep 5
+systemctl status promtail.service --no-pager -l
 fi
 ################### UPDATER #############################################################################################################################
 
@@ -1014,11 +1192,11 @@ systemctl restart cadvisor.service
 
 sleep 5
 
-systemctl status prometheus.service --no-pager
-systemctl status node_exporter.service --no-pager
-systemctl status victoriametrics.service --no-pager
-systemctl status alertmanager.service --no-pager
-systemctl status cadvisor.service --no-pager
+systemctl status prometheus.service --no-pager -l
+systemctl status node_exporter.service --no-pager -l
+systemctl status victoriametrics.service --no-pager -l
+systemctl status alertmanager.service --no-pager -l
+systemctl status cadvisor.service --no-pager -l
 EOF
 chmod +x /etc/cron.weekly/observupdater.sh
 
@@ -1402,7 +1580,7 @@ EOF
 
 systemctl enable nebula
 systemctl start nebula
-systemctl status nebula --no-pager
+systemctl status nebula --no-pager -l
 
 # nebula-cert ca -name 'runalsh inc'
 # nebula-cert sign -name lighthouse -ip "192.168.10.1/24"
