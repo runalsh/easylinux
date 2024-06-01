@@ -683,11 +683,11 @@ receivers:
             api_url: ${slackurl} 
 - name: email_telegram
   # email_configs:
-  # - to: 'runalsh@mail.example.com'
-  #   from: 'runalsh@mail.example.com'
+  # - to: 'user@mail.example.com'
+  #   from: 'user@mail.example.com'
   #   smarthost: 'smtp.mail.example.com:587'
-  #   auth_username: 'runalsh'
-  #   auth_identity: 'runalsh'
+  #   auth_username: 'username'
+  #   auth_identity: 'password'
   #   auth_password: '***'
   telegram_configs:
   - send_resolved: true
@@ -1582,7 +1582,7 @@ systemctl enable nebula
 systemctl start nebula
 systemctl status nebula --no-pager -l
 
-# nebula-cert ca -name 'runalsh inc'
+# nebula-cert ca -name 'user inc'
 # nebula-cert sign -name lighthouse -ip "192.168.10.1/24"
 # nebula-cert sign -name node2 -ip "192.168.10.2/24"
 # nebula-cert sign -name node3 -ip "192.168.10.3/24"
@@ -1590,9 +1590,81 @@ systemctl status nebula --no-pager -l
 # nebula-cert sign -name node5 -ip "192.168.10.5/24"
 
 fi
-################### ANGIE #####################################################################################################################################
+################### ANSIBLE #####################################################################################################################################
+if [[ "$nebula" == "1" ]]; then
+apt update && apt install -y --no-install-recommends --no-install-suggested ansible
+fi
+################### ETCD #####################################################################################################################################
+
+if [[ "$etcd" == "1" ]]; then
+URL_ETCD=`curl -sL -o /dev/null -w %{url_effective} https://github.com/coreos/etcd/releases/latest`
+VERSION_ETCD=${URL_ETCD##*/}
+wget -O /tmp/etcd-linux-amd64.tar.gz  https://github.com/coreos/etcd/releases/download/${VERSION_ETCD}/etcd-v${VERSION_ETCD#v}-linux-$(dpkg --print-architecture).tar.gz
+mkdir -p /usr/local/etcd
+tar xzvf /tmp/etcd-linux-amd64.tar.gz -C /usr/local/etcd --strip-components=1
+
+ETCD_DISCOVERY=https://discovery.etcd.io/63ec7c07688bd29fafd4a4fdf19f8a7br
+
+mkdir -p /tmp/etcd-certs
+curl -L https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 -o /tmp/cfssl
+chmod +x /tmp/cfssl
+sudo mv /tmp/cfssl /usr/local/bin/cfssl
+curl -L https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 -o /tmp/cfssljson
+chmod +x /tmp/cfssljson
+sudo mv /tmp/cfssljson /usr/local/bin/cfssljson
+cat > /tmp/s1.service <<EOF
+[Unit]
+Description=etcd
+Documentation=https://github.com/coreos/etcd
+Conflicts=etcd.service
+Conflicts=etcd2.service
+
+[Service]
+Type=notify
+Restart=always
+RestartSec=5s
+LimitNOFILE=40000
+TimeoutStartSec=0
+
+ExecStart=/tmp/test-etcd/etcd --name s1 \
+  --data-dir /etc/etcd/s1 \
+  --listen-client-urls https://localhost:2379 \
+  --advertise-client-urls https://localhost:2379 \
+  --listen-peer-urls https://localhost:2380 \
+  --initial-advertise-peer-urls https://localhost:2380 \
+  --initial-cluster s1=https://localhost:2380,s2=https://localhost:22380,s3=https://localhost:32380 \
+  --initial-cluster-token tkn \
+  --initial-cluster-state new \
+  --client-cert-auth \
+  --trusted-ca-file /etc/etcd/certs/etcd-root-ca.pem \
+  --cert-file /etc/etcd/certs/s1.pem \
+  --key-file /etc/etcd/certs/s1-key.pem \
+  --peer-client-cert-auth \
+  --peer-trusted-ca-file /etc/etcd/certs/etcd-root-ca.pem \
+  --peer-cert-file /etc/etcd/certs/s1.pem \
+  --peer-key-file /etc/etcd/certs/s1-key.pem \
+  --enable-pprof
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo mv /tmp/s1.service /etc/systemd/system/s1.service
 
 
+sudo systemctl daemon-reload
+sudo systemctl cat s1.service
+sudo systemctl enable s1.service
+sudo systemctl start s1.service
+
+sudo systemctl status s1.service -l --no-pager
+sudo journalctl -u s1.service -l --no-pager|less
+sudo journalctl -f -u s1.service
+
+sudo systemctl stop s1.service
+sudo systemctl disable s1.service
+fi
+# cert http://play.etcd.io/install
+# complete https://etcd.io/docs/v3.4/op-guide/clustering/#etcd-discovery
 
 ################### END #####################################################################################################################################
 rm -rf /tmp/*

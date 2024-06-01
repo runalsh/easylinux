@@ -18,6 +18,8 @@ nebula_node_number=2
 nebula_lighthouse_ip=1...........3
 zerotier_network='80...........37'
 ngrok_key='2f...........YF'
+etcd=0
+etcd_discovery=https://discovery.etcd.io/63e....432432rf # curl https://discovery.etcd.io/new?size=5
 ##################### Observability
 prometheus=0
 victoriametrics=0
@@ -41,6 +43,7 @@ code_server=0
 code_server_passw=password
 terrafom=0
 helm=0
+ansible=1
 ##################### Virt
 docker=0
 dockermetrics=0 
