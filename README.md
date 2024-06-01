@@ -1,9 +1,9 @@
 ### Preconfigure bash and reqs for debian based os
 
         Network overlay: zerotier, nebula, defined, tailscale, ngrok
-        Observability: nodeexporter, prometheus, alertmanager, cadvizor, victoriametrics - with precreated certs
+        Observability: nodeexporter, prometheus, alertmanager, cadvizor, victoriametrics, loki, Vmagent (victoriametrics utils) - with precreated certs
         Dev tools: terraform, helm, kubectl, code server (VS code)
-        Virt: docker
+        Virt: docker with metrics
         WSL optimization (WSL section)
         Network optimization (SYSCTL section)
         Logs prune
@@ -13,7 +13,6 @@
         Services: torrserver, rustdesk
         Other tools: micro, tmux, nmon, python3, fail2ban ...
         Alternative repo for tailscale and hashicorp which block Russian ips, yandex repo for debian and ubuntu
-        Vmagent (victoriametrics utils)
 Plans:
 
         pushgateway
@@ -22,7 +21,7 @@ Plans:
         vault (pki+secrets) service between few hosts, service discovery consul
         vault warden
         rugovblock
-        sslh stunnel dumbproxy 3proxy shadowsocks + v2ray\xray
+        sslh stunnel dumbproxy 3proxy shadowsocks v2ray\xray
 
 Configure in config.sh or create configself.sh
 

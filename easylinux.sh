@@ -872,6 +872,89 @@ systemctl restart cadvisor.service
 sleep 5
 systemctl status cadvisor.service --no-pager
 fi
+
+################### LOKI #####################################################################################################################################
+if [[ "$loki" == "1" ]]; then
+URL_LOKI=`curl -sL -o /dev/null -w %{url_effective} https://github.com/grafana/loki/releases/latest`
+VERSION_LOKI=${URL_LOKI##*/}
+wget -O /tmp/loki.deb https://github.com/grafana/loki/releases/download/${VERSION_LOKI}/loki_${VERSION_LOKI#v}_$(dpkg --print-architecture).deb
+dpkg -i /tmp/loki.deb
+rm -rf /tmp/loki.deb
+mkdir -p /var/lib/loki
+cat << EOF > /etc/loki/config.yml
+auth_enabled: false
+
+server:
+  http_listen_address: 127.0.0.1
+  http_listen_port: 3100
+  http_tls_config:
+    cert_file: /etc/ssl/tls_prometheus_crt.crt
+    key_file: /etc/ssl/tls_prometheus_key.key
+
+common:
+  path_prefix: /var/lib/loki
+  storage:
+    filesystem:
+      chunks_directory: /var/lib/loki/chunks
+      rules_directory: /var/lib/loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  retention_period: 7d # days to delete old logs, you can change
+  max_query_lookback: 7d # days to delete old logs, you can change
+
+ruler:
+  alertmanager_url: http://localhost:9093
+  alertmanager_client:
+    tls_cert_path: /etc/ssl/tls_prometheus_crt.crt
+    tls_key_path:/etc/ssl/tls_prometheus_key.key
+    tls_insecure_skip_verify: true
+    basic_auth_username: $observ_user
+    basic_auth_password: $observ_passw 
+
+analytics:
+  reporting_enabled: false
+
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 7d
+  
+querier:
+  query_ingesters_within: 2h # avoid https://github.com/grafana/loki/issues/6043
+
+EOF
+if [[ "$tailscale" == "1" ]]; then
+  ts_docker=$(ifconfig | awk '/tailscale0:/ {getline; if ($1 == "inet") print $2}')
+  sed -i "s/127.0.0.1/$ts_docker/" /etc/loki/config.yml
+fi
+sudo chown --recursive loki /etc/loki
+sudo chown --recursive loki /var/lib/loki
+systemctl daemon-reload
+systemctl enable loki.service
+systemctl restart loki.service
+sleep 5
+systemctl status loki.service --no-pager
+fi
 ################### UPDATER #############################################################################################################################
 
 mkdir -p /etc/cron.weekly
@@ -985,23 +1068,13 @@ fi
 ################### BASHRC #####################################################################################################################################
 if [[ "$bashrc" == "1" ]]; then
 cat << "EOF" > ~/.bashrc
-source <(kubectl completion bash)
-complete -F __start_kubectl k
-complete -o default -F __start_kubectl k
-complete -C /usr/bin/terraform terraform
 source <(helm completion bash)
-complete -o default -F __start_helm h
 source /usr/share/bash-completion/bash_completion
-alias k='kubectl'
-alias tf='terraform'
-alias tfa='terraform apply'
-alias tfaa='terraform apply --auto-approve'
 alias n='nano'
 alias m='micro'
 alias ns='netstat -tulnp'
 alias nsg='netstat -tulnp' | grep 
 alias iptl='iptables -xvnL --line-numbers'
-alias h='helm'
 alias update='sudo apt-get update && sudo apt-get upgrade -y'
 export PATH="usr/local/bin:$PATH"
 force_color_prompt=yes
@@ -1030,33 +1103,82 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 EOF
+if [[ "$terraform" == "1" ]]; then
+cat << "EOF" > ~/.bashrc
+complete -C /usr/bin/terraform terraform
+alias tf='terraform'
+alias tfa='terraform apply'
+alias tfaa='terraform apply --auto-approve'
+EOF
+fi
+if [[ "$kubectl" == "1" ]]; then
+cat << "EOF" > ~/.bashrc
+source <(kubectl completion bash)
+alias k='kubectl'
+complete -F __start_kubectl k
+complete -o default -F __start_kubectl k
+EOF
+fi
+if [[ "$helm" == "1" ]]; then
+cat << "EOF" > ~/.bashrc
+alias h='helm'
+complete -o default -F __start_helm h
+EOF
+fi
+
 source ~/.bashrc
 fi
 ################### LOGS #####################################################################################################################################
 mv /etc/logrotate.conf /etc/logrotate.conf.bak
-echo "
-daily
-compress
-rotate 0
-daily
+mkdir -p /etc/logrotate.d
+cat << "EOF" > /etc/logrotate.d/btmp
 /var/log/btmp {
     missingok
     daily
     create 0660 root utmp
-	compress
-    rotate 0
+	  compress
+    rotate 1
 }
+EOF
+cat << "EOF" > /etc/logrotate.d/wtmp
 /var/log/wtmp {
     missingok
     daily
     create 0660 root utmp
-	compress
-    rotate 0
+	  compress
+    rotate 1
 }
-" > /etc/logrotate.conf
+EOF
+
+cat << "EOF" > /etc/logrotate.conf
+weekly
+compress
+rotate 1
+missingok
+EOF
+
+cat << "EOF" > /etc/logrotate.d/rsyslog
+/var/log/syslog
+/var/log/mail.log
+/var/log/kern.log
+/var/log/auth.log
+/var/log/user.log
+/var/log/cron.log
+{
+	rotate 1
+	daily
+	missingok
+	notifempty
+	compress
+	delaycompress
+	sharedscripts
+	postrotate
+	  /usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}
+EOF
 logrotate -d /etc/logrotate.conf
 service logrotate restart
-
 echo "Compress=yes
 SystemMaxUse=10M" >> /etc/systemd/journald.conf
 service systemd-journald restart

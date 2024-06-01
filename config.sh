@@ -27,6 +27,7 @@ cadvisor=0
 less_user_priveleges=1 #if 1 for each service will be created own user
 observ_user='p...........s'
 observ_passw='r...........h'
+loki=0
 #openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -keyout tls_prometheus_key.key -out tls_prometheus_crt.crt
 #tls_prometheus_key=$(cat /etc/ssl/tls_prometheus_key.key | base64 -w 0)
 #tls_prometheus_crt=$(cat /etc/ssl/tls_prometheus_crt.crt | base64 -w 0)
