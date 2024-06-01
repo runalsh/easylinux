@@ -1,6 +1,6 @@
 ### Preconfigure bash and reqs for debian based os
 
-        Network overlay: zerotier, nebula, defined, tailscale, ngrok
+        Network overlay: zerotier, nebula, defined, tailscale, ngrok, etcd
         Observability: nodeexporter, prometheus, alertmanager, cadvizor, victoriametrics, loki, 
                 promtail, vmagent (victoriametrics) - with precreated certs
         Dev tools: ansible, terraform, helm, kubectl, code server (VS code)
