@@ -1704,7 +1704,7 @@ RestartSec=5s
 LimitNOFILE=40000
 TimeoutStartSec=0
 
-ExecStart=/usr/local/etcd/etcd --name s1 \
+ExecStart=/usr/local/etcd/etcd --name $(curl -s ipinfo.io/ip) \
   --data-dir /etc/etcd/s1 \
   --listen-client-urls https://localhost:2379 \
   --advertise-client-urls https://localhost:2379 \
@@ -1722,7 +1722,7 @@ ExecStart=/usr/local/etcd/etcd --name s1 \
   --peer-cert-file /etc/etcd/certs/s1.pem \
   --peer-key-file /etc/etcd/certs/s1-key.pem \
   --enable-pprof
-# ExecStart=/usr/local/etcd/etcd --name infra0 --initial-advertise-peer-urls http://10.0.1.10:2380 \
+# ExecStart=/usr/local/etcd/etcd --name $(curl -s ipinfo.io/ip) --initial-advertise-peer-urls http://10.0.1.10:2380 \
 #   --listen-peer-urls http://10.0.1.10:2380 \
 #   --listen-client-urls http://10.0.1.10:2379,http://127.0.0.1:2379 \
 #   --advertise-client-urls http://10.0.1.10:2379 \
