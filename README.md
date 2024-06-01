@@ -17,7 +17,7 @@
                 yandex repo for debian and ubuntu
 Plans:
 
-        all observability tools as docker-compose file, d-c an jinja template
+        all observability tools as docker-compose file, d-c as jinja template
         pushgateway
         angie (nginx fork) with proxy_connect and lua modules + console
         all observability services throu angie (idn)
