@@ -529,6 +529,52 @@ systemctl restart victoriametrics.service
 sleep 5
 systemctl status victoriametrics.service --no-pager -l
 fi
+
+################ VICTORIALOGS #####################################################################################################################################
+if [ "$victorialogs" == "1" ]; then
+step1=$(curl -s https://api.github.com/repos/VictoriaMetrics/VictoriaMetrics/releases)
+step2=$(echo "$step1" | jq -r '.[] | select(.tag_name | contains("victorialogs"))')
+step3=$(echo "$step2" | jq -r '.assets[] | select(.name | contains("victoria-logs-linux-amd64")) | .browser_download_url')
+URL_VMU_LOGS=$(echo $step3 | grep -o 'https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/[^ ]*victoria-logs-linux-'''$(dpkg --print-architecture)'''-[^ ]*victorialogs.tar.gz' | head -1)
+echo $URL_VMU_LOGS
+wget -O /tmp/victoria-logs-linux-victorialogs.tar.gz  $URL_VMU_LOGS
+mkdir -p /usr/local/bin
+tar zxvf /tmp/victoria-logs-linux-victorialogs.tar.gz -C /usr/local/bin
+rm -rf /tmp/victoria-logs-linux-victorialogs.tar.gz
+mkdir /etc/victorialogs
+sudo cat << EOF > /etc/systemd/system/victorialogs.service
+[Unit]
+Description=Victoria Logs
+After=network.target
+
+[Service]
+Type=simple
+#User=victorialogs
+ExecStart=/usr/local/bin/victoria-logs-prod --storageDataPath=/var/lib/victorialogs --loggerFormat=json \
+    -tls --tlsCertFile=/etc/ssl/tls_prometheus_crt.crt --tlsKeyFile=/etc/ssl/tls_prometheus_key.key \
+    --httpListenAddr=100.85.46.1:9428 --httpListenAddr=127.0.0.1:9428
+
+TimeoutSec = 60
+Restart = on-failure
+RestartSec = 2
+
+[Install]
+WantedBy=multi-user.target
+EOF
+if [[ "$tailscale" == "1" ]]; then
+  ts_docker=$(ifconfig | awk '/tailscale0:/ {getline; if ($1 == "inet") print $2}')
+  sed -i "s/127.0.0.1/$ts_docker/" /etc/victorialogs/victorialogs.yml
+fi
+sudo chmod 740 /etc/victorialogs
+sudo chmod 660 /etc/victorialogs/*
+mkdir -p /var/lib/victorialogs
+sudo chown --recursive prometheus:prometheus /var/lib/victorialogs
+sudo chown --recursive prometheus:prometheus /etc/victorialogs
+systemctl daemon-reload
+systemctl enable victorialogs.service
+systemctl restart victorialogs.service
+sleep 5
+systemctl status victorialogs.service --no-pager -l
 ################### PUSHGATEWAY #####################################################################################################################################
 
 ################### VMAGENT (VICTORIAMETRICS) #####################################################################################################################################
@@ -577,7 +623,7 @@ Documentation=https://github.com/VictoriaMetrics/VictoriaMetrics
 # User=prometheus
 # Group=prometheus
 [Service]
-ExecStart=/usr/local/bin/vmagent-prod -config.file=/etc/victoriametrics-utils/vmagent.yml \
+ExecStart=/usr/local/bin/vmagent-prod --config.file=/etc/victoriametrics-utils/vmagent.yml \
 --remoteWrite.tmpDataPath=/var/lib/victoriametrics-vmagent \
 --remoteWrite.basicAuth.username=$observ_user \
 --remoteWrite.basicAuth.password=$observ_passw \

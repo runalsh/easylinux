@@ -32,6 +32,7 @@ observ_passw='r...........h'
 loki=0
 promtail=0
 victoriametrics_agent=0
+victorialogs=0
 #openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -keyout tls_prometheus_key.key -out tls_prometheus_crt.crt
 #tls_prometheus_key=$(cat /etc/ssl/tls_prometheus_key.key | base64 -w 0)
 #tls_prometheus_crt=$(cat /etc/ssl/tls_prometheus_crt.crt | base64 -w 0)
