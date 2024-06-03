@@ -8,19 +8,12 @@ global:
 #Alertmanager configuration
 alerting:
   alertmanagers:
-  - scheme: https
-    basic_auth:
-      username: $observ_user
-      password: $observ_passw
-    tls_config: 
-      ca_file: /etc/ssl/tls_prometheus_crt.crt
-      insecure_skip_verify: true
   - static_configs:
     - targets:
       - localhost:9093
 
 rule_files:
-#  - "/etc/alertmanager/rules.yml"
+ - "/etc/alertmanager/rules.yml"
 #  - "second_rules.yml"
 
 scrape_configs:
@@ -28,26 +21,11 @@ scrape_configs:
     file_sd_configs:
       - files: ['/etc/prometheus/discovered/*.yml']
   - job_name: prometheus
-    scheme: https
-    basic_auth:
-      username: $observ_user
-      password: $observ_passw
-    tls_config: 
-      ca_file: /etc/ssl/tls_prometheus_crt.crt
-      insecure_skip_verify: true
     static_configs:
       - targets:
         - localhost:9090 #put you remote server here
   - job_name: node_exporter
     metrics_path: /metrics
-    scheme: https
-    enable_compression: true
-    basic_auth:
-      username: $observ_user
-      password: $observ_passw
-    tls_config:
-      ca_file: /etc/ssl/tls_prometheus_crt.crt
-      insecure_skip_verify: true
     follow_redirects: true
     enable_http2: true
     static_configs:

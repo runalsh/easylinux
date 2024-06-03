@@ -8,6 +8,8 @@ positions:
 
 clients:
 - url: http://loki:3100/loki/api/v1/push
+- url: https://victorialogs:9428/insert/loki/api/v1/push?_stream_fields=instance,job,host,app
+
 
 scrape_configs:
 

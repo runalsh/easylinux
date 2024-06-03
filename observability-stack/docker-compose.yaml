@@ -36,6 +36,7 @@ services:
     volumes:
       - ./etc/prometheus:/etc/prometheus:ro
       - prometheus_data:/var/lib/prometheus
+      - ./etc/alertmanager:/etc/alertmanager:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path /var/lib/prometheus'
@@ -78,12 +79,11 @@ services:
       - ./etc/alertmanager:/etc/alertmanager:ro
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--web.config.file=/etc/alertmanager/web.yml'
       - '--storage.path=/var/lib/alertmanager'
-      - '--cluster.listen-address=0.0.0.0:9094'
+      - '--cluster.listen-address=:9094'
     restart: always
     expose:
-      - 9093
+      - 9094
     networks:
       - observability
 
@@ -132,7 +132,7 @@ services:
       - /dev/disk/:/dev/disk:ro
     command: 
       - '--port=9089'
-      - '--storage_duration=1m0s'
+      - '--storage_duration=10m0s'
       - '--docker_only=true'
       - '--disable_metrics="advtcp,app,cpu_topology,cpuset,disk,hugetlb,memory_numa,percpu,perf_event,referenced_memory,resctrl,sched,tcp,udp"'
     restart: always
@@ -170,10 +170,13 @@ services:
       - 4242:4242
     volumes:
       - victoriametrics_data:/var/lib/victoriametrics
-      - ./etc/victoriametrics:/etc/victoriametrics
+      # - ./etc/victoriametrics:/etc/victoriametrics:ro
+      - ./etc/prometheus/prometheus.yml:/etc/victoriametrics/victoriametrics.yml:ro
+      - ./etc/alertmanager:/etc/alertmanager:ro
     command:
       - "--storageDataPath=/var/lib/victoriametrics"
       - '--promscrape.config=/etc/victoriametrics/victoriametrics.yml'
+      - '--promscrape.config.strictParse=false'
       - '--retentionPeriod=15d'
       - '--config.strictParse=false'
       - "--graphiteListenAddr=:2003"
@@ -189,14 +192,40 @@ services:
     container_name: victorialogs
     image: docker.io/victoriametrics/victoria-logs:v0.15.0-victorialogs
     command:
-      - '--storageDataPath=/var/lib/victorialogs '
+      - '--storageDataPath=/var/lib/victorialogs'
       - '--loggerFormat=json'
       - '--httpListenAddr=:9428'
     volumes:
       - victorialogs_data:var/lib/victorialogs
-      - ./etc/victorialogs:/etc/victorialogs
+      - ./etc/victorialogs:/etc/victorialogs:ro
     ports:
       - "9428:9428"
+    networks:
+      - observability
+
+  grafana:
+    image: grafana/grafana:9.1.1
+    container_name: grafana
+    entrypoint: [ "/bin/bash", "-c" ]
+    command: [ "chmod +x /download.sh && /download.sh && /run.sh" ]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./etc/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./etc/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./etc/grafana/plugins/:/var/lib/grafana/plugins
+      - ./etc/grafana/plugins/download.sh:/download.sh
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DEFAULT_INSTANCE_NAME=localhost
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ENABLE_GZIP=true
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GRAFANA_PORT=3000
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=victorialogs-datasource,victoriametrics-datasource
+    expose:
+      - 3000
     networks:
       - observability
 
@@ -205,6 +234,8 @@ services:
   #   container_name: watchtower
   #   restart: unless-stopped
   #   command: --schedule "0 10 3 * * *" --cleanup
+  # networks:
+  #     - observability
   #   volumes:
   #     - ${SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
   #     - "${PRIMARY_MOUNT}/watchtower/config/:/config"
@@ -222,6 +253,8 @@ services:
   #   cap_add:                                               # Required for tailscale to work
   #     - net_admin
   #     - sys_module
+  # networks:
+  #     - observability
   #   command: tailscaled
     # environment:
     #     - TS_AUTHKEY=bvshbvjhsrbhvjdbhjdvbjhdbjv
@@ -251,30 +284,9 @@ services:
   #     - /dev/net/tun
   #   privileged: true
   #   network_mode: host
-
-  # grafana:
-  #   image: grafana/grafana:9.1.1
-  #   container_name: grafana
-  #   volumes:
-  #     - grafana_data:/var/lib/grafana
-  #     - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-  #     - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-  #   env_file:
-  #     - config
-  #   restart: always
-    # environment:
-    #   - GF_SECURITY_ADMIN_USER=admin
-    #   - GF_SECURITY_ADMIN_PASSWORD=admin
-    #   - GF_DEFAULT_INSTANCE_NAME=localhost
-    #   - GF_USERS_ALLOW_SIGN_UP=false
-    #   - GF_SERVER_ENABLE_GZIP=true
-    #   - GF_SERVER_ROOT_URL=http://localhost:3000
-    #   - GRAFANA_PORT=3000
-      # - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=victorialogs-datasource
-  #   expose:
-  #     - 3000
-  #   networks:
+  # networks:
   #     - observability
+
 
   # vmalert:
   #   container_name: vmalert
