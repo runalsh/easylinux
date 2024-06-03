@@ -88,7 +88,7 @@ services:
       - observability
 
   loki:
-    image: grafana/loki:2.9.8
+    image: grafana/loki:3.0.0
     container_name: loki
     volumes:
       - ./etc/loki:/etc/loki:ro
@@ -102,7 +102,7 @@ services:
       - observability
 
   promtail:
-    image: grafana/promtail:2.9.8
+    image: grafana/promtail:3.0.0
     container_name: promtail
     privileged: true
     volumes:
