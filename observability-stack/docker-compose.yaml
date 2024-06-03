@@ -204,7 +204,7 @@ services:
       - observability
 
   grafana:
-    image: grafana/grafana:9.1.1
+    image: grafana/grafana:9.5.19
     container_name: grafana
     entrypoint: [ "/bin/bash", "-c" ]
     command: [ "chmod +x /download.sh && /download.sh && /run.sh" ]
