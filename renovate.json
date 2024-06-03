@@ -1,0 +1,63 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+      "config:recommended"
+    ],
+    "packageRules": [
+      {
+        "groupName": "all patch dependencies",
+        "groupSlug": "all-patch",
+        "matchPackagePatterns": [
+          "*"
+        ],
+        "matchUpdateTypes": [
+          "patch"
+        ],
+        "automerge": true,
+        "schedule": [],
+        "labels": [
+          "dependencies",
+          "patch"
+        ]
+      },
+      {
+        "groupName": "all minor dependencies",
+        "groupSlug": "all-minors",
+        "matchPackagePatterns": [
+          "*"
+        ],
+        "matchUpdateTypes": [
+          "minor"
+        ],
+        "automerge": true,
+        "schedule": [],
+        "labels": [
+          "dependencies",
+          "minor"
+        ],
+        "minimumReleaseAge": "3 days"
+      },
+      {
+        "groupName": "all major dependencies",
+        "groupSlug": "all-majors",
+        "matchPackagePatterns": [
+          "*"
+        ],
+        "matchUpdateTypes": [
+          "major"
+        ],
+        "automerge": false,
+        "labels": [
+          "dependencies",
+          "major"
+        ],
+        "minimumReleaseAge": "7 days"
+      }
+    ],
+    "automergeType": "branch",
+    "automerge": true,
+    "requiredStatusChecks": null,
+    "dependencyDashboard": true,
+    "baseBranches": ["main", "observ-stack"],
+    "timezone": "Europe/Moscow"
+  }

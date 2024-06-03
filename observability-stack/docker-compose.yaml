@@ -1,0 +1,438 @@
+# version: "3.9"
+
+networks:
+  observability:
+    # external: true
+    driver: bridge
+
+volumes:
+    prometheus_data: 
+    grafana_data: 
+    alertmanager_data: 
+    loki_data: 
+    promtail_data: 
+    postgres_data:
+    minio_data: 
+    victoriametrics_data:
+    victorialogs_data:
+    vmagent_data:
+
+services:
+
+  # init_certs:
+    # pass
+  # nginx(angie):
+    # pass
+  # init_config_env:
+    # pass
+  # tailscale:
+    # pass
+  # zerotier:
+    # pass
+
+  prometheus:
+    image: prom/prometheus:v2.38.0
+    container_name: prometheus
+    volumes:
+      - ./etc/prometheus:/etc/prometheus:ro
+      - prometheus_data:/var/lib/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path /var/lib/prometheus'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--storage.tsdb.retention=15d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: always
+    expose:
+      - 9090
+    networks:
+      - observability
+
+  nodeexporter:
+    image: prom/node-exporter:v1.3.1
+    container_name: nodeexporter
+    privileged: true
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--no-collector.rapl'
+    restart: always
+    expose:
+      - 9100
+    networks:
+      - observability
+
+  alertmanager:
+    image: prom/alertmanager:v0.24.0
+    container_name: alertmanager
+    volumes:
+      - alertmanager_data:/var/lib/alertmanager
+      - ./etc/alertmanager:/etc/alertmanager:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--web.config.file=/etc/alertmanager/web.yml'
+      - '--storage.path=/var/lib/alertmanager'
+      - '--cluster.listen-address=0.0.0.0:9094'
+    restart: always
+    expose:
+      - 9093
+    networks:
+      - observability
+
+  loki:
+    image: grafana/loki:2.6.0
+    container_name: loki
+    volumes:
+      - ./etc/loki:/etc/loki:ro
+      - loki_data:/var/lib/loki
+    command: 
+      - '-config.file=/etc/loki/config.yml'
+    expose:
+      - 3100
+    restart: always
+    networks:
+      - observability
+
+  promtail:
+    image: grafana/promtail:2.6.0
+    container_name: promtail
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/log:/var/log:ro
+      - ./etc/promtail:/etc/promtail:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail_data/promtail-positions.yaml:/etc/promtail/promtail-positions.yaml
+    command: 
+      - '-config.file=/etc/promtail/config.yaml'
+    restart: always
+    networks:
+      - observability
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.45.0
+    container_name: cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /sys/fs/cgroup:/cgroup:ro
+      - /dev/disk/:/dev/disk:ro
+    command: 
+      - '--port=9089'
+      - '--storage_duration=1m0s'
+      - '--docker_only=true'
+      - '--disable_metrics="advtcp,app,cpu_topology,cpuset,disk,hugetlb,memory_numa,percpu,perf_event,referenced_memory,resctrl,sched,tcp,udp"'
+    restart: always
+    expose:
+      - 9089
+    networks:
+      - observability
+
+  vmagent:
+    container_name: vmagent
+    image: victoriametrics/vmagent:v1.101.0
+    ports:
+      - 8429:8429
+    volumes:
+      - vmagent_data:/var/lib/vmagent
+      - ./etc/vmagent:/etc/vmagent:ro
+    command:
+      - '--config.file=/etc/vmagent/vmagent.yml'
+      - '--remoteWrite.tmpDataPath=/var/lib/vmagent'
+      - '--httpListenAddr=:8429'
+      - '--remoteWrite.maxDiskUsagePerURL=256MB'
+    networks:
+      - observability
+    restart: always
+
+  victoriametrics:
+    container_name: victoriametrics
+    image: victoriametrics/victoria-metrics:v1.101.0
+    ports:
+      - 8428:8428
+      - 8089:8089
+      - 8089:8089/udp
+      - 2003:2003
+      - 2003:2003/udp
+      - 4242:4242
+    volumes:
+      - victoriametrics_data:/var/lib/victoriametrics
+      - ./etc/victoriametrics:/etc/victoriametrics
+    command:
+      - "--storageDataPath=/var/lib/victoriametrics"
+      - '--promscrape.config=/etc/victoriametrics/victoriametrics.yml'
+      - '--retentionPeriod=15d'
+      - '--config.strictParse=false'
+      - "--graphiteListenAddr=:2003"
+      - "--opentsdbListenAddr=:4242"
+      - "--httpListenAddr=:8428"
+      - "--influxListenAddr=:8089"
+      - "--vmalert.proxyURL=http://vmalert:8880"
+    networks:
+      - observability
+    restart: always
+
+  victorialogs:
+    container_name: victorialogs
+    image: docker.io/victoriametrics/victoria-logs:v0.15.0-victorialogs
+    command:
+      - '--storageDataPath=/var/lib/victorialogs '
+      - '--loggerFormat=json'
+      - '--httpListenAddr=:9428'
+    volumes:
+      - victorialogs_data:var/lib/victorialogs
+      - ./etc/victorialogs:/etc/victorialogs
+    ports:
+      - "9428:9428"
+    networks:
+      - observability
+
+  # watchtower:
+  #   image: containrrr/watchtower:1.7.1
+  #   container_name: watchtower
+  #   restart: unless-stopped
+  #   command: --schedule "0 10 3 * * *" --cleanup
+  #   volumes:
+  #     - ${SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
+  #     - "${PRIMARY_MOUNT}/watchtower/config/:/config"
+  #     - "${PRIMARY_MOUNT}/watchtower/docker-config.json:/config.json"
+
+  # tailscale:
+  #   privileged: true
+  #   hostname: tailscale                                         # This will become the tailscale device name
+  #   network_mode: "host"
+  #   container_name: tailscale
+  #   image: tailscale/tailscale:latest
+  #   volumes:
+  #     - "/opt/appdata/tailscale/var_lib:/var/lib"        # State data will be stored in this directory
+  #     - "/dev/net/tun:/dev/net/tun"                      # Required for tailscale to work
+  #   cap_add:                                               # Required for tailscale to work
+  #     - net_admin
+  #     - sys_module
+  #   command: tailscaled
+    # environment:
+    #     - TS_AUTHKEY=bvshbvjhsrbhvjdbhjdvbjhdbjv
+    #     - TS_USERSPACE=true
+    #     - TS_STATE_DIR=/var/lib/tailscale
+    #     - TS_SOCKET=/var/run/tailscale/tailscaled.sock
+          # '- TS_HOSTNAME=${TS_HOSTNAME}
+  #   restart: unless-stopped
+
+  # zerotier:
+  #   image: zerotier/zerotier:latest
+   #   container_name: zerotier
+  #   restart: always
+  #   volumes:
+  #     - ./etc/zerotier/zerotier-one:/var/lib/zerotier-one
+  #     - ./etc/zerotier/config:/data/config
+  #     - ./service.d/zerotier:/service.d
+  #   cap_drop:
+  #     - NET_RAW
+  #     - NET_ADMIN
+  #     - SYS_ADMIN
+  #   devices:
+    # environment:
+      # - ZEROTIER_API_SECRET=${ZEROTIER_API_SECRET}
+      # - ZEROTIER_IDENTITY_PUBLIC=${ZEROTIER_IDENTITY_PUBLIC}
+      # - ZEROTIER_IDENTITY_SECRET=${ZEROTIER_IDENTITY_SECRET}
+  #     - /dev/net/tun
+  #   privileged: true
+  #   network_mode: host
+
+  # grafana:
+  #   image: grafana/grafana:9.1.1
+  #   container_name: grafana
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #     - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+  #     - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+  #   env_file:
+  #     - config
+  #   restart: always
+    # environment:
+    #   - GF_SECURITY_ADMIN_USER=admin
+    #   - GF_SECURITY_ADMIN_PASSWORD=admin
+    #   - GF_DEFAULT_INSTANCE_NAME=localhost
+    #   - GF_USERS_ALLOW_SIGN_UP=false
+    #   - GF_SERVER_ENABLE_GZIP=true
+    #   - GF_SERVER_ROOT_URL=http://localhost:3000
+    #   - GRAFANA_PORT=3000
+      # - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=victorialogs-datasource
+  #   expose:
+  #     - 3000
+  #   networks:
+  #     - observability
+
+  # vmalert:
+  #   container_name: vmalert
+  #   image: victoriametrics/vmalert:v1.101.0
+  #   depends_on:
+  #     - "victoriametrics"
+  #     - "alertmanager"
+  #   ports:
+  #     - 8880:8880
+  #   volumes:
+  #     - ./alerts.yml:/etc/alerts/alerts.yml
+  #     - ./alerts-health.yml:/etc/alerts/alerts-health.yml
+  #     - ./alerts-vmagent.yml:/etc/alerts/alerts-vmagent.yml
+  #     - ./alerts-vmalert.yml:/etc/alerts/alerts-vmalert.yml
+  #   command:
+  #     - "--datasource.url=http://victoriametrics:8428/"
+  #     - "--remoteRead.url=http://victoriametrics:8428/"
+  #     - "--remoteWrite.url=http://victoriametrics:8428/"
+  #     - "--notifier.url=http://alertmanager:9093/"
+  #     - "--rule=/etc/alerts/*.yml"
+  #     # display source of alerts in grafana
+  #     - "--external.url=http://127.0.0.1:3000" #grafana outside container
+  #     # when copypaste the line be aware of '$$' for escaping in '$expr'
+  #     - '--external.alert.source=explore?orgId=1&left={"datasource":"VictoriaMetrics","queries":[{"expr":{{$$expr|jsonEscape|queryEscape}},"refId":"A"}],"range":{"from":"now-1h","to":"now"}}'
+  #   networks:
+  #     - observability
+  #   restart: always
+
+  # pushgateway:
+  #   image: prom/pushgateway:v1.4.3
+  #   container_name: pushgateway
+  #   restart: always
+  #   expose:
+  #     - 9091
+  #   networks:
+  #     - observability
+
+  # caddy:
+  #   image: caddy:2.3.0
+  #   container_name: caddy
+  #   ports:
+  #     - "3000:3000"
+  #     - "9090:9090"
+  #     - "8080:8080"
+  #     - "9093:9093"
+  #     - "9091:9091"
+  #     - "3100:3100"
+  #   volumes:
+  #     - ./caddy:/etc/caddy
+  #   environment:
+  #     - ADMIN_USER=${ADMIN_USER:-admin}
+  #     - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+  #     - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH:-JDJhJDE0JE91S1FrN0Z0VEsyWmhrQVpON1VzdHVLSDkyWHdsN0xNbEZYdnNIZm1pb2d1blg4Y09mL0ZP}
+  #   restart: always
+  #   networks:
+  #     - observability
+
+  # minio:
+  #   image: minio/minio:RELEASE.2024-01-05T22-17-24Z
+  #   container_name: minio
+  #   volumes:
+  #     - minio_data:/data
+  #   environment:
+  #     - MINIO_ROOT_USER=minio
+  #     - MINIO_ROOT_PASSWORD=minio123
+  #   entrypoint:
+  #     - sh
+  #     - -euc
+  #     - |
+  #       mkdir -p /data/loki-data && \
+  #       mkdir -p /data/loki-ruler && \
+  #       minio server /data
+  #   restart: unless-stopped
+  #   expose:
+  #     - 9000
+  #   networks:
+  #     - observability
+
+  # keycloak:
+  #   image: keycloak/keycloak:24.0.4
+  #   environment:
+  #     KEYCLOAK_USER: admin
+  #     KEYCLOAK_PASSWORD: admin
+  #     DB_VENDOR: postgres
+  #     DB_ADDR: postgres
+  #     DB_DATABASE: keycloak
+  #     DB_USER: keycloak
+  #     DB_PASSWORD: password
+  #   ports:
+  #     - '8088:8080'
+  #   restart: always
+  #   networks:
+  #     - observability      
+
+
+  # postgres:
+  #   image: postgres:16.3
+  #   environment:
+  #     POSTGRES_DB: keycloak
+  #     POSTGRES_USER: keycloak
+  #     POSTGRES_PASSWORD: password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - '5432:5432'
+  #   networks:
+  #     - observability
+  #   restart: always
+
+  # blackbox-exporter:
+  #   image: bitnami/blackbox-exporter:0.25.0
+  #   volumes:
+  #     - '/etc/blackbox:/etc/blackbox'
+  #   command:
+  #     - '--config.file=/etc/blackbox/blackbox.yml'
+  #   ports:
+  #     - '9116:9115'
+  #   restart: always
+  #   networks:
+  #     - observability
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
