@@ -215,7 +215,7 @@ services:
   #   hostname: tailscale                                         # This will become the tailscale device name
   #   network_mode: "host"
   #   container_name: tailscale
-  #   image: tailscale/tailscale:latest
+  #   image: tailscale/tailscale:v1.66.4
   #   volumes:
   #     - "/opt/appdata/tailscale/var_lib:/var/lib"        # State data will be stored in this directory
   #     - "/dev/net/tun:/dev/net/tun"                      # Required for tailscale to work
@@ -232,7 +232,7 @@ services:
   #   restart: unless-stopped
 
   # zerotier:
-  #   image: zerotier/zerotier:latest
+  #   image: zerotier/zerotier:1.14.0
    #   container_name: zerotier
   #   restart: always
   #   volumes:
@@ -333,7 +333,7 @@ services:
   #     - observability
 
   # minio:
-  #   image: minio/minio:RELEASE.2024-01-05T22-17-24Z
+  #   image: minio/minio:RELEASE.2024-05-28T17-19-04Z
   #   container_name: minio
   #   volumes:
   #     - minio_data:/data
