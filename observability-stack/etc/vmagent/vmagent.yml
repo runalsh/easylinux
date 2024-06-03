@@ -1,0 +1,17 @@
+vmagent_global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+vmagent_scrape_configs:
+  - job_name: my_application
+    scheme: http
+    # params:
+    #   match[]:
+    #     - '{job=~".+"}'
+    static_configs:
+      - targets: 
+          - localhost:8888  #app with p8s page
+vmagent_remote_write:
+  - url: "http://<pushgateway>:9091/metrics/job/my_app/instance/host123"
+# it will be {job="my_app",instance="host123"}
+# if push to VM use http://localhost:8428/api/v1/write
+# for more look https://docs.victoriametrics.com/single-server-victoriametrics/#how-to-import-data-in-prometheus-exposition-format

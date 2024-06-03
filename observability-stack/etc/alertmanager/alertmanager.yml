@@ -1,6 +1,6 @@
 global:
   slackchannel="firefirefire"           #put you data
-  slackurl="https://slackclaskclaksclak" #put you data
+  slackurl='https://hooks.slack.com/services/<webhook-id>'
   
 route:
   group_by: ['alertname']
@@ -20,8 +20,10 @@ route:
   - receiver: blackhole
     matchers:
      - alertname="Watchdog"
+
 templates:
   - '/etc/alertmanager/*.tmpl'  
+  
 receivers:
 - name: blackhole
 - name: 'slack'
