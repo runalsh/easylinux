@@ -1,4 +1,4 @@
-version: "3"
+# version: "3.9"
 
 networks:
   observability:
@@ -6,14 +6,13 @@ networks:
     driver: bridge
 
 volumes:
-    prometheus_data: {}
-    grafana_data: {}
-    alertmanager_data: {}
-    loki_data: {}
-    promtail_data: {}
-    open-webui:
+    prometheus_data: 
+    grafana_data: 
+    alertmanager_data: 
+    loki_data: 
+    promtail_data: 
     postgres_data:
-    minio_data: {}
+    minio_data: 
     victoriametrics_data:
     victorialogs_data:
     vmagent_data:
@@ -201,6 +200,58 @@ services:
     networks:
       - observability
 
+  # watchtower:
+  #   image: containrrr/watchtower:1.7.1
+  #   container_name: watchtower
+  #   restart: unless-stopped
+  #   command: --schedule "0 10 3 * * *" --cleanup
+  #   volumes:
+  #     - ${SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
+  #     - "${PRIMARY_MOUNT}/watchtower/config/:/config"
+  #     - "${PRIMARY_MOUNT}/watchtower/docker-config.json:/config.json"
+
+  # tailscale:
+  #   privileged: true
+  #   hostname: tailscale                                         # This will become the tailscale device name
+  #   network_mode: "host"
+  #   container_name: tailscale
+  #   image: tailscale/tailscale:latest
+  #   volumes:
+  #     - "/opt/appdata/tailscale/var_lib:/var/lib"        # State data will be stored in this directory
+  #     - "/dev/net/tun:/dev/net/tun"                      # Required for tailscale to work
+  #   cap_add:                                               # Required for tailscale to work
+  #     - net_admin
+  #     - sys_module
+  #   command: tailscaled
+    # environment:
+    #     - TS_AUTHKEY=bvshbvjhsrbhvjdbhjdvbjhdbjv
+    #     - TS_USERSPACE=true
+    #     - TS_STATE_DIR=/var/lib/tailscale
+    #     - TS_SOCKET=/var/run/tailscale/tailscaled.sock
+          # '- TS_HOSTNAME=${TS_HOSTNAME}
+  #   restart: unless-stopped
+
+  # zerotier:
+  #   image: zerotier/zerotier:latest
+   #   container_name: zerotier
+  #   restart: always
+  #   volumes:
+  #     - ./etc/zerotier/zerotier-one:/var/lib/zerotier-one
+  #     - ./etc/zerotier/config:/data/config
+  #     - ./service.d/zerotier:/service.d
+  #   cap_drop:
+  #     - NET_RAW
+  #     - NET_ADMIN
+  #     - SYS_ADMIN
+  #   devices:
+    # environment:
+      # - ZEROTIER_API_SECRET=${ZEROTIER_API_SECRET}
+      # - ZEROTIER_IDENTITY_PUBLIC=${ZEROTIER_IDENTITY_PUBLIC}
+      # - ZEROTIER_IDENTITY_SECRET=${ZEROTIER_IDENTITY_SECRET}
+  #     - /dev/net/tun
+  #   privileged: true
+  #   network_mode: host
+
   # grafana:
   #   image: grafana/grafana:9.1.1
   #   container_name: grafana
@@ -249,7 +300,7 @@ services:
   #     # when copypaste the line be aware of '$$' for escaping in '$expr'
   #     - '--external.alert.source=explore?orgId=1&left={"datasource":"VictoriaMetrics","queries":[{"expr":{{$$expr|jsonEscape|queryEscape}},"refId":"A"}],"range":{"from":"now-1h","to":"now"}}'
   #   networks:
-  #     - vm_net
+  #     - observability
   #   restart: always
 
   # pushgateway:
@@ -300,7 +351,7 @@ services:
   #   expose:
   #     - 9000
   #   networks:
-  #     - monitor-net
+  #     - observability
 
   # keycloak:
   #   image: keycloak/keycloak:24.0.4
@@ -318,16 +369,6 @@ services:
   #   networks:
   #     - observability      
 
-  # open-webui:
-  #   image: ghcr.io/open-webui/open-webui:v0.2.2
-  #   network_mode: 'host'
-  #   volumes:
-  #     - open-webui:/app/backend/data
-  #   environment:
-  #     - OLLAMA_BASE_URLS=http://127.0.0.1:11434
-  #   restart: always
-  #   networks:
-  #     - observability
 
   # postgres:
   #   image: postgres:16.3
