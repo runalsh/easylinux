@@ -54,6 +54,7 @@ services:
   nodeexporter:
     image: prom/node-exporter:v1.3.1
     container_name: nodeexporter
+    privileged: true
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -75,7 +76,7 @@ services:
     container_name: alertmanager
     volumes:
       - alertmanager_data:/var/lib/alertmanager
-      - /etc/alertmanager:/etc/alertmanager:ro
+      - ./etc/alertmanager:/etc/alertmanager:ro
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--web.config.file=/etc/alertmanager/web.yml'
@@ -91,7 +92,7 @@ services:
     image: grafana/loki:2.6.0
     container_name: loki
     volumes:
-      - ./loki:/etc/loki:ro
+      - ./etc/loki:/etc/loki:ro
       - loki_data:/var/lib/loki
     command: 
       - '-config.file=/etc/loki/config.yml'
@@ -104,6 +105,7 @@ services:
   promtail:
     image: grafana/promtail:2.6.0
     container_name: promtail
+    privileged: true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/log:/var/log:ro
@@ -188,9 +190,9 @@ services:
     container_name: victorialogs
     image: docker.io/victoriametrics/victoria-logs:v0.15.0-victorialogs
     command:
-      --storageDataPath=/var/lib/victorialogs 
-      --loggerFormat=json
-      --httpListenAddr=:9428
+      - '--storageDataPath=/var/lib/victorialogs '
+      - '--loggerFormat=json'
+      - '--httpListenAddr=:9428'
     volumes:
       - victorialogs_data:var/lib/victorialogs
       - ./etc/victorialogs:/etc/victorialogs
