@@ -357,65 +357,69 @@ services:
   #   networks:
   #     - observability
 
-  # minio:
-  #   image: minio/minio:RELEASE.2024-05-28T17-19-04Z
-  #   container_name: minio
-  #   volumes:
-  #     - minio_data:/data
-  #   environment:
-  #     - MINIO_ROOT_USER=admin
-  #     - MINIO_ROOT_PASSWORD=admin123
-  #     - MINIO_PROMETHEUS_AUTH_TYPE="public"
-  #     - MINIO_LOGGER_WEBHOOK_ENABLE_target1="on"
-  #     - MINIO_LOGGER_WEBHOOK_AUTH_TOKEN_target1="token"
-  #     - MINIO_LOGGER_WEBHOOK_ENDPOINT_target1=http://localhost:8080/minio/logs
-  #     - MINIO_COMPRESSION_ENABLE="on"
-  #     - MINIO_COMPRESSION_EXTENSIONS=".txt,.log,.csv,.json,.tar,.xml,.bin"
-  #     - MINIO_COMPRESSION_MIME_TYPES="text/*,application/json,application/xml"
-  #   entrypoint:
-  #     - sh
-  #     - -euc
-  #     - |
-  #       mkdir -p /data/loki-data && \
-  #       mkdir -p /data/loki-ruler && \
-  #       minio server /data --console-address ":9001"
-  #   restart: unless-stopped
-  #   ports:
-  #     - 9000:9000
-  #     - 9001:9001
-  #   networks:
-  #     - observability
+  minio:
+    image: minio/minio:RELEASE.2024-05-28T17-19-04Z
+    container_name: minio
+    volumes:
+      - minio_data:/data
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=admin123
+      - MINIO_PROMETHEUS_AUTH_TYPE="public"
+      - MINIO_LOGGER_WEBHOOK_ENABLE_target1="on"
+      - MINIO_LOGGER_WEBHOOK_AUTH_TOKEN_target1="token"
+      - MINIO_LOGGER_WEBHOOK_ENDPOINT_target1=http://localhost:8080/minio/logs
+      - MINIO_COMPRESSION_ENABLE="on"
+      - MINIO_COMPRESSION_EXTENSIONS=".txt,.log,.csv,.json,.tar,.xml,.bin"
+      - MINIO_COMPRESSION_MIME_TYPES="text/*,application/json,application/xml"
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /data/loki-data && \
+        mkdir -p /data/loki-ruler && \
+        minio server /data --console-address ":9001"
+    restart: unless-stopped
+    ports:
+      - 9000:9000
+      - 9001:9001
+    networks:
+      - observability
 
-  # keycloak:
-  #   image: keycloak/keycloak:24.0.4
-  #   environment:
-  #     KEYCLOAK_USER: admin
-  #     KEYCLOAK_PASSWORD: admin
-  #     DB_VENDOR: postgres
-  #     DB_ADDR: postgres
-  #     DB_DATABASE: keycloak
-  #     DB_USER: keycloak
-  #     DB_PASSWORD: password
-  #   ports:
-  #     - '8088:8080'
-  #   restart: always
-  #   networks:
-  #     - observability      
+  keycloak:
+    image: keycloak/keycloak:24.0.4
+    container_name: keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      DB_VENDOR: postgres
+      DB_ADDR: postgres
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_PASSWORD: password
+      KC_HEALTH_ENABLED: 'true'
+      KC_METRICS_ENABLED: 'true'
+    command: "start-dev"  
+    ports:
+      - '8088:8080'
+    restart: always
+    networks:
+      - observability      
 
-
-  # postgres:
-  #   image: postgres:16.3
-  #   environment:
-  #     POSTGRES_DB: keycloak
-  #     POSTGRES_USER: keycloak
-  #     POSTGRES_PASSWORD: password
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   ports:
-  #     - '5432:5432'
-  #   networks:
-  #     - observability
-  #   restart: always
+  postgres:
+    container_name: postgres
+    image: postgres:16.3
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    networks:
+      - observability
+    restart: always
 
   # blackbox-exporter:
   #   image: bitnami/blackbox-exporter:0.25.0
