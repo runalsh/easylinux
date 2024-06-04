@@ -197,7 +197,7 @@ services:
 
   victorialogs:
     container_name: victorialogs
-    image: docker.io/victoriametrics/victoria-logs:v0.15.0-victorialogs
+    image: docker.io/victoriametrics/victoria-logs:v0.16.0-victorialogs
     command:
       - '--storageDataPath=/var/lib/victorialogs'
       - '--loggerFormat=json'
@@ -344,7 +344,7 @@ services:
     # logging: *default-logging 
 
   pushgateway:
-    image: prom/pushgateway:v1.4.3
+    image: prom/pushgateway:v1.8.0
     container_name: pushgateway
     restart: always
     ports:
