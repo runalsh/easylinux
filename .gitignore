@@ -1,3 +1,4 @@
+.env.override
 configself.sh
 observability-stack/real
 observability-stack/etc/grafana/plugins/victorialogs-datasource

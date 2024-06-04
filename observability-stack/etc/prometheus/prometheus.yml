@@ -84,6 +84,7 @@ scrape_configs:
 #           role: node-exporter
 #           env: prod
 # {% endfor %}
+
   - job_name: "blackbox-https"
     metrics_path: /probe
     params:
