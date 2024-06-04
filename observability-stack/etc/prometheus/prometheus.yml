@@ -74,7 +74,13 @@ scrape_configs:
   - job_name: pushgateway
     static_configs:
     - targets: ['pushgateway:9091']
-
+  - job_name: watchtower
+    scrape_interval: 5s
+    metrics_path: /v1/metrics
+    bearer_token: demotoken
+    static_configs:
+      - targets:
+        - 'watchtower:8088'
 #   - job_name: node_exporter_multi_node
 #     static_configs:
 # {% for n in range(3400) %}
