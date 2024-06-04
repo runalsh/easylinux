@@ -242,17 +242,25 @@ services:
     networks:
       - observability
 
-  # watchtower:
-  #   image: containrrr/watchtower:1.7.1
-  #   container_name: watchtower
-  #   restart: unless-stopped
-  #   command: --schedule "0 10 3 * * *" --cleanup
-  # networks:
-  #     - observability
-  #   volumes:
-  #     - ${SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
-  #     - "${PRIMARY_MOUNT}/watchtower/config/:/config"
-  #     - "${PRIMARY_MOUNT}/watchtower/docker-config.json:/config.json"
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    container_name: watchtower
+    restart: unless-stopped
+    networks:
+      - observability
+    environment:
+      WATCHTOWER_POLL_INTERVAL: 21600
+      TZ: Europe/Moscow
+      WATCHTOWER_SCHEDULE: "0 0 4 * * *"
+      WATCHTOWER_CLEANUP: true
+      WATCHTOWER_MONITOR_ONLY: 'false'
+      WATCHTOWER_LIFECYCLE_HOOKS: 1
+      WATCHTOWER_NOTIFICATIONS: shoutrrr
+      WATCHTOWER_NOTIFICATION_URL: telegram://<YourBotToken>@telegram/?channels=<YourChatId>
+    volumes:
+      - ${SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
+      # - "${PRIMARY_MOUNT}/watchtower/config/:/config"
+      # - "${PRIMARY_MOUNT}/watchtower/docker-config.json:/config.json"
 
   # tailscale:
   #   privileged: true
@@ -328,14 +336,14 @@ services:
   #     - observability
   #   restart: always
 
-  # pushgateway:
-  #   image: prom/pushgateway:v1.4.3
-  #   container_name: pushgateway
-  #   restart: always
-  #   expose:
-  #     - 9091
-  #   networks:
-  #     - observability
+  pushgateway:
+    image: prom/pushgateway:v1.4.3
+    container_name: pushgateway
+    restart: always
+    ports:
+      - 9091:9091
+    networks:
+      - observability
 
   # caddy:
   #   image: caddy:2.3.0
@@ -368,7 +376,7 @@ services:
       - MINIO_PROMETHEUS_AUTH_TYPE="public"
       - MINIO_LOGGER_WEBHOOK_ENABLE_target1="on"
       - MINIO_LOGGER_WEBHOOK_AUTH_TOKEN_target1="token"
-      - MINIO_LOGGER_WEBHOOK_ENDPOINT_target1=http://localhost:8080/minio/logs
+      - MINIO_LOGGER_WEBHOOK_ENDPOINT_target1=http://minio:8080/minio/logs
       - MINIO_COMPRESSION_ENABLE="on"
       - MINIO_COMPRESSION_EXTENSIONS=".txt,.log,.csv,.json,.tar,.xml,.bin"
       - MINIO_COMPRESSION_MIME_TYPES="text/*,application/json,application/xml"
@@ -386,52 +394,52 @@ services:
     networks:
       - observability
 
-  keycloak:
-    image: keycloak/keycloak:24.0.4
-    container_name: keycloak
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      DB_VENDOR: postgres
-      DB_ADDR: postgres
-      DB_DATABASE: keycloak
-      DB_USER: keycloak
-      DB_PASSWORD: password
-      KC_HEALTH_ENABLED: 'true'
-      KC_METRICS_ENABLED: 'true'
-    command: "start-dev"  
-    ports:
-      - '8088:8080'
-    restart: always
-    networks:
-      - observability      
-
-  postgres:
-    container_name: postgres
-    image: postgres:16.3
-    environment:
-      POSTGRES_DB: keycloak
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - '5432:5432'
-    networks:
-      - observability
-    restart: always
-
-  # blackbox-exporter:
-  #   image: bitnami/blackbox-exporter:0.25.0
-  #   volumes:
-  #     - ./etc/blackbox:/etc/blackbox:ro
-  #   command:
-  #     - '--config.file=/etc/blackbox/blackbox.yml'
+  # keycloak:
+  #   image: keycloak/keycloak:24.0.4
+  #   container_name: keycloak
+  #   environment:
+  #     KEYCLOAK_ADMIN: admin
+  #     KEYCLOAK_ADMIN_PASSWORD: admin
+  #     DB_VENDOR: postgres
+  #     DB_ADDR: postgres
+  #     DB_DATABASE: keycloak
+  #     DB_USER: keycloak
+  #     DB_PASSWORD: password
+  #     KC_HEALTH_ENABLED: 'true'
+  #     KC_METRICS_ENABLED: 'true'
+  #   command: "start-dev"  
   #   ports:
-  #     - '9115:9115'
+  #     - '8088:8080'
   #   restart: always
   #   networks:
+  #     - observability      
+
+  # postgres:
+  #   container_name: postgres
+  #   image: postgres:16.3-alpine
+  #   environment:
+  #     POSTGRES_DB: keycloak
+  #     POSTGRES_USER: keycloak
+  #     POSTGRES_PASSWORD: password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - '5432:5432'
+  #   networks:
   #     - observability
+  #   restart: always
+
+  blackbox-exporter:
+    image: bitnami/blackbox-exporter:0.25.0
+    volumes:
+      - ./etc/blackbox:/etc/blackbox:ro
+    command:
+      - '--config.file=/etc/blackbox/blackbox.yml'
+    ports:
+      - '9115:9115'
+    restart: always
+    networks:
+      - observability
 
 
 
