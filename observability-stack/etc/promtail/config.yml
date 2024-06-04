@@ -4,11 +4,11 @@ server:
   grpc_listen_port: 0
 
 positions:
-  filename: /etc/promtail/promtail-positions.yaml
+  filename: /tmp/promtail/promtail-positions.yaml
 
 clients:
 - url: http://loki:3100/loki/api/v1/push
-- url: https://victorialogs:9428/insert/loki/api/v1/push?_stream_fields=instance,job,host,app
+- url: http://victorialogs:9428/insert/loki/api/v1/push?_stream_fields=instance,job,host,app
 
 
 scrape_configs:

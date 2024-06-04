@@ -10,7 +10,7 @@ alerting:
   alertmanagers:
   - static_configs:
     - targets:
-      - localhost:9093
+      - alertmanager:9093
 
 rule_files:
  - "/etc/alertmanager/rules.yml"
@@ -23,18 +23,54 @@ scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets:
-        - localhost:9090 #put you remote server here
+        - prometheus:9090
   - job_name: node_exporter
-    metrics_path: /metrics
-    follow_redirects: true
-    enable_http2: true
     static_configs:
       - targets:
-        - localhost:9100 #put you remote server here
-  - job_name: docker
+        - nodeexporter:9100
+  - job_name: alertmanager
     static_configs:
       - targets:
-        - localhost:9090 #put you remote server here
+        - alertmanager:9093
+  - job_name: cadvisor
+    static_configs:
+      - targets:
+        - cadvisor:9089   
+  - job_name: loki
+    static_configs:
+      - targets:
+        - loki:3100     
+  - job_name: promtail
+    static_configs:
+      - targets:
+        - promtail:9080         
+  - job_name: victorialogs
+    static_configs:
+      - targets:
+        - victorialogs:9428      
+  - job_name: victoriametrics
+    static_configs:
+      - targets:
+        - victoriametrics:8428  
+  - job_name: vmagent
+    static_configs:
+      - targets:
+        - vmagent:8429
+  - job_name: minio-cluster
+    metrics_path: /minio/v2/metrics/cluster
+    scheme: http
+    static_configs:
+    - targets: ['minio:9000']   
+  - job_name: minio-cluster-bucket
+    metrics_path: /minio/v2/metrics/bucket
+    scheme: http
+    static_configs:
+    - targets: ['minio:9000']       
+  - job_name: minio-cluster-node
+    metrics_path: /minio/v2/metrics/node
+    scheme: http
+    static_configs:
+    - targets: ['minio:9000']
 #   - job_name: node_exporter_multi_node
 #     static_configs:
 # {% for n in range(3400) %}
@@ -44,19 +80,19 @@ scrape_configs:
 #           role: node-exporter
 #           env: prod
 # {% endfor %}
-  - job_name: "blackbox-https"
-    metrics_path: /probe
-    params:
-      module: [http_2xx]
-    static_configs:
-      - targets:
-          - https://google.com
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance
-      - target_label: __address__
-        replacement: blackbox-exporter:9115
-      - source_labels: [__param_module]
-        target_label: module
+  # - job_name: "blackbox-https"
+  #   metrics_path: /probe
+  #   params:
+  #     module: [http_2xx]
+  #   static_configs:
+  #     - targets:
+  #         - https://google.com
+  #   relabel_configs:
+  #     - source_labels: [__address__]
+  #       target_label: __param_target
+  #     - source_labels: [__param_target]
+  #       target_label: instance
+  #     - target_label: __address__
+  #       replacement: blackbox-exporter:9115
+  #     - source_labels: [__param_module]
+  #       target_label: module

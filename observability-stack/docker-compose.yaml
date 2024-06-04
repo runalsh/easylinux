@@ -33,21 +33,23 @@ services:
   prometheus:
     image: prom/prometheus:v2.52.0
     container_name: prometheus
+    privileged: true
+    user: root
     volumes:
       - ./etc/prometheus:/etc/prometheus:ro
       - prometheus_data:/var/lib/prometheus
       - ./etc/alertmanager:/etc/alertmanager:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path /var/lib/prometheus'
+      - '--storage.tsdb.path=/var/lib/prometheus'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--storage.tsdb.retention=15d'
+      - '--storage.tsdb.retention.time=15d'
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
     restart: always
-    expose:
-      - 9090
+    ports:
+      - 9090:9090
     networks:
       - observability
 
@@ -66,14 +68,15 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
       - '--no-collector.rapl'
     restart: always
-    expose:
-      - 9100
+    ports:
+      - 9100:9100
     networks:
       - observability
 
   alertmanager:
     image: prom/alertmanager:v0.27.0
     container_name: alertmanager
+    user: root
     volumes:
       - alertmanager_data:/var/lib/alertmanager
       - ./etc/alertmanager:/etc/alertmanager:ro
@@ -82,38 +85,9 @@ services:
       - '--storage.path=/var/lib/alertmanager'
       - '--cluster.listen-address=:9094'
     restart: always
-    expose:
-      - 9094
-    networks:
-      - observability
-
-  loki:
-    image: grafana/loki:3.0.0
-    container_name: loki
-    volumes:
-      - ./etc/loki:/etc/loki:ro
-      - loki_data:/var/lib/loki
-    command: 
-      - '-config.file=/etc/loki/config.yml'
-    expose:
-      - 3100
-    restart: always
-    networks:
-      - observability
-
-  promtail:
-    image: grafana/promtail:3.0.0
-    container_name: promtail
-    privileged: true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/log:/var/log:ro
-      - ./etc/promtail:/etc/promtail:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - promtail_data/promtail-positions.yaml:/etc/promtail/promtail-positions.yaml
-    command: 
-      - '-config.file=/etc/promtail/config.yaml'
-    restart: always
+    ports:
+      - 9094:9094
+      - 9093:9093
     networks:
       - observability
 
@@ -134,10 +108,44 @@ services:
       - '--port=9089'
       - '--storage_duration=10m0s'
       - '--docker_only=true'
-      - '--disable_metrics="advtcp,app,cpu_topology,cpuset,disk,hugetlb,memory_numa,percpu,perf_event,referenced_memory,resctrl,sched,tcp,udp"'
+      - '--disable_metrics=advtcp,app,cpu_topology,cpuset,disk,hugetlb,memory_numa,percpu,perf_event,referenced_memory,resctrl,sched,tcp,udp'
     restart: always
-    expose:
-      - 9089
+    ports:
+      - 9089:9089
+    networks:
+      - observability
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    user: root
+    volumes:
+      - ./etc/loki:/etc/loki:ro
+      - loki_data:/var/lib/loki
+    command: 
+      - '-config.file=/etc/loki/config.yml'
+      - '-config.expand-env=true'
+    ports:
+      - 3100:3100
+    restart: always
+    networks:
+      - observability
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: promtail
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/log:/var/log:ro
+      - ./etc/promtail:/etc/promtail:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail_data:/tmp/promtail
+    command: 
+      - '-config.file=/etc/promtail/config.yml'
+    restart: always
+    ports:
+      - 9080:9080
     networks:
       - observability
 
@@ -149,11 +157,16 @@ services:
     volumes:
       - vmagent_data:/var/lib/vmagent
       - ./etc/vmagent:/etc/vmagent:ro
+      - ./etc/prometheus:/etc/prometheus:ro
     command:
-      - '--config.file=/etc/vmagent/vmagent.yml'
+      # - '-config.file /etc/vmagent/vmagent.yml'
+      - '--promscrape.config=/etc/victoriametrics/victoriametrics.yml'
+      - '--promscrape.config.strictParse=false'
       - '--remoteWrite.tmpDataPath=/var/lib/vmagent'
+      - '--promscrape.configCheckInterval=1m'
       - '--httpListenAddr=:8429'
-      - '--remoteWrite.maxDiskUsagePerURL=256MB'
+      - '--remoteWrite.maxDiskUsagePerURL=128MB'
+      - '--remoteWrite.url='
     networks:
       - observability
     restart: always
@@ -178,12 +191,12 @@ services:
       - '--promscrape.config=/etc/victoriametrics/victoriametrics.yml'
       - '--promscrape.config.strictParse=false'
       - '--retentionPeriod=15d'
-      - '--config.strictParse=false'
       - "--graphiteListenAddr=:2003"
       - "--opentsdbListenAddr=:4242"
       - "--httpListenAddr=:8428"
       - "--influxListenAddr=:8089"
       - "--vmalert.proxyURL=http://vmalert:8880"
+      - '--promscrape.configCheckInterval=1m'
     networks:
       - observability
     restart: always
@@ -196,10 +209,10 @@ services:
       - '--loggerFormat=json'
       - '--httpListenAddr=:9428'
     volumes:
-      - victorialogs_data:var/lib/victorialogs
+      - victorialogs_data:/var/lib/victorialogs
       - ./etc/victorialogs:/etc/victorialogs:ro
     ports:
-      - "9428:9428"
+      - 9428:9428
     networks:
       - observability
 
@@ -207,7 +220,7 @@ services:
     image: grafana/grafana:11.0.0
     container_name: grafana
     entrypoint: [ "/bin/bash", "-c" ]
-    command: [ "chmod +x /download.sh && /download.sh && /run.sh" ]
+    command: [ "/download.sh && /run.sh" ]
     volumes:
       - grafana_data:/var/lib/grafana
       - ./etc/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
@@ -224,8 +237,8 @@ services:
       - GF_SERVER_ROOT_URL=http://localhost:3000
       - GRAFANA_PORT=3000
       - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=victorialogs-datasource,victoriametrics-datasource
-    expose:
-      - 3000
+    ports:
+      - 3000:3000
     networks:
       - observability
 
@@ -350,18 +363,26 @@ services:
   #   volumes:
   #     - minio_data:/data
   #   environment:
-  #     - MINIO_ROOT_USER=minio
-  #     - MINIO_ROOT_PASSWORD=minio123
+  #     - MINIO_ROOT_USER=admin
+  #     - MINIO_ROOT_PASSWORD=admin123
+  #     - MINIO_PROMETHEUS_AUTH_TYPE="public"
+  #     - MINIO_LOGGER_WEBHOOK_ENABLE_target1="on"
+  #     - MINIO_LOGGER_WEBHOOK_AUTH_TOKEN_target1="token"
+  #     - MINIO_LOGGER_WEBHOOK_ENDPOINT_target1=http://localhost:8080/minio/logs
+  #     - MINIO_COMPRESSION_ENABLE="on"
+  #     - MINIO_COMPRESSION_EXTENSIONS=".txt,.log,.csv,.json,.tar,.xml,.bin"
+  #     - MINIO_COMPRESSION_MIME_TYPES="text/*,application/json,application/xml"
   #   entrypoint:
   #     - sh
   #     - -euc
   #     - |
   #       mkdir -p /data/loki-data && \
   #       mkdir -p /data/loki-ruler && \
-  #       minio server /data
+  #       minio server /data --console-address ":9001"
   #   restart: unless-stopped
-  #   expose:
-  #     - 9000
+  #   ports:
+  #     - 9000:9000
+  #     - 9001:9001
   #   networks:
   #     - observability
 
@@ -399,11 +420,11 @@ services:
   # blackbox-exporter:
   #   image: bitnami/blackbox-exporter:0.25.0
   #   volumes:
-  #     - '/etc/blackbox:/etc/blackbox'
+  #     - ./etc/blackbox:/etc/blackbox:ro
   #   command:
   #     - '--config.file=/etc/blackbox/blackbox.yml'
   #   ports:
-  #     - '9116:9115'
+  #     - '9115:9115'
   #   restart: always
   #   networks:
   #     - observability

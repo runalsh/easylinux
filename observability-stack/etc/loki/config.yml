@@ -24,13 +24,13 @@ ingester:
       replication_factor: 1
   chunk_idle_period: 1h
   chunk_retain_period: 24h
-  max_transfer_retries: 3
+
   
 storage_config:
-  boltdb_shipper:
-    active_index_directory: /var/lib/loki/index
-    cache_location: /var/lib/loki/index_cache
-    shared_store: filesystem
+  # boltdb_shipper:
+  #   active_index_directory: /var/lib/loki/index
+  #   cache_location: /var/lib/loki/index_cache
+  #   shared_store: filesystem
   filesystem:
     directory: /var/lib/loki/chunks
 
@@ -50,18 +50,18 @@ schema_config:
       index:
         prefix: index_
         period: 24h
-    - from: 2020-10-24
-      store: boltdb-shipper
-      object_store: filesystem
-      schema: v11
-      index:
-        prefix: index_
-        period: 24h    
+    # - from: 2020-10-24
+    #   store: boltdb-shipper
+    #   object_store: filesystem
+    #   schema: v11
+    #   index:
+    #     prefix: index_
+    #     period: 24h    
 
 limits_config:
   retention_period: 7d # days to delete old logs, you can change
   max_query_lookback: 7d # days to delete old logs, you can change
-  enforce_metric_name: true
+  # enforce_metric_name: true
   reject_old_samples: true
   reject_old_samples_max_age: 7d
 
