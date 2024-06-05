@@ -414,7 +414,7 @@ services:
     logging: *default-logging
 
   angie_init_cert:
-    image: runalsh/angie:1.5.1
+    image: runalsh/angie:1.5.2
     container_name: angie_init_cert
     command: sh -c "[ -f /etc/angie_data/privkey.pem ] && { echo 'File /etc/angie_data/privkey.pem exists'; exit 1; } || mkdir -p /etc/angie_data && apk add --no-cache openssl && openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout /etc/angie_data/privkey.pem -out /etc/angie_data/certificate.pem -subj '/CN=your_domain.com'"
     volumes:
@@ -422,7 +422,7 @@ services:
     logging: *default-logging
 
   angie:
-    image: runalsh/angie:1.5.1
+    image: runalsh/angie:1.5.2
     container_name: angie
     depends_on:
       - angie_init_htpasswd
