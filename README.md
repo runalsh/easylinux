@@ -15,13 +15,14 @@
         Other tools: micro, tmux, nmon, python3, fail2ban ...
         Alternative repo for tailscale and hashicorp which block Russian ips, 
                 yandex repo for debian and ubuntu
+        All observability tools as docker-compose file, d-c as jinja template (moved to https://github.com/runalsh/observability-stack)
+        Consul
 Plans:
 
-        all observability tools as docker-compose file, d-c as jinja template
         pushgateway
         angie (nginx fork) with proxy_connect and lua modules + console
         all observability services throu angie (idn)
-        vault (pki+secrets) service between few hosts, service discovery consul
+        vault (pki+secrets) service between few hosts
         vault warden
         rugovblock
 
