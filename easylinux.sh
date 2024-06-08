@@ -16,6 +16,13 @@ if [[ "${UID}" -ne 0 ]]; then
 fi
 source config.sh
 source configself.sh
+
+IP=$(curl -s ifconfig.me)
+COUNTRY=$(curl -s http://ipinfo.io/$IP_ADDRESS | grep -oP '"country": "\K[^"]+')
+if [ "$COUNTRY" = "RU" ]; then 
+  echo "russia detected" && alternative_repo=1; 
+fi
+
 if [[ "$alternative_repo" == "1" ]]; then
     cp /etc/apt/sources.list /etc/apt/sources.list.bak || true
     touch /etc/apt/sources.list
@@ -64,18 +71,18 @@ apt-get install -y --no-install-recommends --no-install-suggests \
 #tig iptables-persistent
 timedatectl set-timezone Europe/Moscow
 echo "set -g mouse on" >> /etc/tmux.conf
-echo external ip and domain $(curl -s ipinfo.io/ip).nip.io $(curl -s ipinfo.io/ip).sslip.io
+echo external ip and domains $(curl -s ipinfo.io/ip).nip.io $(curl -s ipinfo.io/ip).sslip.io
 mkdir -p ~/.config/pip
 echo '[global]
 break-system-packages = true' >> ~/.config/pip/pip.conf
-wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python3 /tmp/get-pip.py
+wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python3 /tmp/get-pip.py && rm -rf /tmp/get-pip.py
 ################### WSL #####################################################################################################################################
 if [[ "$wsl" == "1" ]]; then
 echo '[boot]
 systemd=true
 [boot]
 command = service docker start' > /etc/wsl.conf
-apt install --no-install-recommends -y systemd systemd-sysv libpam-systemd dbus-user-session openssh-server openssh-sftp-server 
+apt update && apt install --no-install-recommends -y systemd systemd-sysv libpam-systemd dbus-user-session openssh-server openssh-sftp-server 
 fi
 ################### SYSCTL #####################################################################################################################################
 if [[ "$sysctl" == "1" ]]; then
@@ -922,7 +929,6 @@ systemctl restart cadvisor.service
 sleep 5
 systemctl status cadvisor.service --no-pager -l
 fi
-
 ################### LOKI #####################################################################################################################################
 if [[ "$loki" == "1" ]]; then
 URL_LOKI=`curl -sL -o /dev/null -w %{url_effective} https://github.com/grafana/loki/releases/latest`
@@ -1538,8 +1544,8 @@ dnclient enroll -code $definedenrollkey
 fi
 ################### NEBULA #####################################################################################################################################
 if [[ "$nebula" == "1" ]]; then
-wget -O /tmp/nebula-linux-amd64.tar.gz https://github.com/slackhq/nebula/releases/latest/download/nebula-linux-amd64.tar.gz
-tar -xzvf nebula-linux-arm64.tar.gz
+wget -O /tmp/nebula-linux-$(dpkg --print-architecture).tar.gz https://github.com/slackhq/nebula/releases/latest/download/nebula-linux-$(dpkg --print-architecture).tar.gz
+tar -xzvf nebula-linux-$(dpkg --print-architecture).tar.gz
 mv /tmp/{nebula,nebula-cert} /usr/local/bin/
 mkdir -p /etc/nebula/certs
 touch /etc/nebula/node$nebula_node_number
@@ -1637,7 +1643,7 @@ systemctl status nebula --no-pager -l
 
 fi
 ################### ANSIBLE #####################################################################################################################################
-if [[ "$nebula" == "1" ]]; then
+if [[ "$ansible" == "1" ]]; then
 apt update && apt install -y --no-install-recommends --no-install-suggested ansible
 fi
 ################### ETCD #####################################################################################################################################
