@@ -1302,6 +1302,8 @@ source <(helm completion bash)
 source /usr/share/bash-completion/bash_completion
 alias n='nano'
 alias m='micro'
+alias cls='clear'
+alias ipconfig='ifconfig'
 alias ns='netstat -tulnp'
 alias nsg='netstat -tulnp' | grep 
 alias iptl='iptables -xvnL --line-numbers'
