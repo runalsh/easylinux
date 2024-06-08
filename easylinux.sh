@@ -1521,7 +1521,7 @@ tailscale up --advertise-exit-node --accept-routes --auth-key $tailscale_key
 fi
 ################### DEFINED #####################################################################################################################################
 if [[ "$defined" == "1" ]]; then
-wget -O /usr/local/bin/dnclient https://dl.defined.net/9b82a8a5/v0.4.1/linux/amd64/dnclient
+wget -O /usr/local/bin/dnclient $(curl -sL https://api.defined.net/v1/downloads | jq -r .data.dnclient.latest | jq -r '.["linux-amd64"]')
 sudo chmod +x /usr/local/bin/dnclient
 dnclient install
 dnclient start
