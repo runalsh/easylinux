@@ -4,7 +4,7 @@
         Observability: nodeexporter, prometheus, alertmanager, cadvizor, victoriametrics, loki, 
                 promtail, vmagent (victoriametrics), victorialogs - with precreated certs
         Dev tools: ansible, terraform, helm, kubectl, code server (VS code)
-        Virt: docker with metrics
+        Virt: docker with metrics, dry (docker cli ui)
         WSL optimization (WSL section)
         Network optimization (SYSCTL section)
         Logs prune

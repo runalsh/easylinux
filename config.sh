@@ -48,6 +48,7 @@ ansible=1
 ##################### Virt
 docker=0
 dockermetrics=0 
+dry=0
 #metrics bugged
 ##################### Network optimization
 sysctl=1

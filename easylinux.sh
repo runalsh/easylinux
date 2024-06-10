@@ -1809,6 +1809,15 @@ ETCDCTL_API=3 /tmp/test-etcd/etcdctl \
 fi
 # cert http://play.etcd.io/install
 # complete https://etcd.io/docs/v3.4/op-guide/clustering/#etcd-discovery
+################### DRY (docker ui) #####################################################################################################################################
+if [[ "$dry" == "1" ]]; then
+URL_DRY=`curl -sL -o /dev/null -w %{url_effective} https://github.com/moncho/dry/releases/latest`
+VERSION_DRY=${URL_DRY##*/}
+rm -rf /tmp
+wget -O /tmp/dry https://github.com/moncho/dry/releases/download/${VERSION_DRY}/dry-linux-$(dpkg --print-architecture)
+mv /tmp/dry /usr/local/bin/dry
+chmod +x /usr/local/bin/dry
+fi
 
 ################### END #####################################################################################################################################
 rm -rf /tmp/*
