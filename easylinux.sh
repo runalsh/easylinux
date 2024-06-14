@@ -591,8 +591,8 @@ if [ "$victoriametrics_agent" == "1" ]; then
 URL_VMU=`curl -sL -o /dev/null -w %{url_effective} https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest`
 VERSION_VMU=${URL_VMU##*/}
 wget -O /tmp/vmutils-linux-amd64.tar.gz https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${VERSION_VMU}/vmutils-linux-$(dpkg --print-architecture)-${VERSION_VMU}.tar.gz
-mkdir -p /usr/local/bin/victoriametrics-utils
-tar zxvf /tmp/vmutils-linux-amd64.tar.gz -C /usr/local/bin/victoriametrics-utils
+mkdir -p /usr/local/victoriametrics-utils
+tar zxvf /tmp/vmutils-linux-amd64.tar.gz -C /usr/local/victoriametrics-utils
 rm -rf /tmp/vmutils-linux-amd64.tar.gz
 mkdir /etc/victoriametrics-utils
 
@@ -630,7 +630,7 @@ Documentation=https://github.com/VictoriaMetrics/VictoriaMetrics
 # User=prometheus
 # Group=prometheus
 [Service]
-ExecStart=/usr/local/bin/vmagent-prod --config.file=/etc/victoriametrics-utils/vmagent.yml \
+ExecStart=/usr/local/victoriametrics-utils/vmagent-prod --config.file=/etc/victoriametrics-utils/vmagent.yml \
 --remoteWrite.tmpDataPath=/var/lib/victoriametrics-vmagent \
 --remoteWrite.basicAuth.username=$observ_user \
 --remoteWrite.basicAuth.password=$observ_passw \
@@ -1192,7 +1192,9 @@ cat << EOF > /etc/cron.weekly/upgrader.sh
 apt update && apt upgrade -y && apt autoremove -y && apt clean && apt autoclean 
 EOF
 
-cat << EOF > /etc/cron.weekly/observupdater.sh
+cat << 'EOF' > /etc/cron.weekly/observupdater.sh
+#/bin/bash
+
 URL_PROM=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/prometheus/releases/latest`
 VERSION_PROM=${URL_PROM##*/}
 rm -rf /tmp/prometheus.tar.gz
@@ -1215,14 +1217,14 @@ rm -rf /usr/local/bin/node_exporter
 ln -s /usr/local/node_exporter/node_exporter /usr/local/bin/node_exporter
 systemctl restart node_exporter.service
 
-URL_VM=`curl -sL -o /dev/null -w %{url_effective} https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest`
+URL_VM=$(curl -sL -o /dev/null -w %{url_effective} https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest)
 VERSION_VM=${URL_VM##*/}
 wget -O /tmp/victoria-metrics-linux-amd64.tar.gz https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${VERSION_VM}/victoria-metrics-linux-$(dpkg --print-architecture)-${VERSION_VM}.tar.gz
 tar zxvf /tmp/victoria-metrics-linux-amd64.tar.gz -C /usr/local/bin
 rm -rf /tmp/victoria-metrics-linux-amd64.tar.gz
 systemctl restart victoriametrics.service
 
-URL_AM=`curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/alertmanager/releases/latest`
+URL_AM=$(curl -sL -o /dev/null -w %{url_effective} https://github.com/prometheus/alertmanager/releases/latest)
 VERSION_AM=${URL_AM##*/}
 rm -rf /tmp/alertmanager.tar.gz
 wget -O /tmp/alertmanager.tar.gz https://github.com/prometheus/alertmanager/releases/download/${VERSION_AM}/alertmanager-${VERSION_AM#v}.linux-$(dpkg --print-architecture).tar.gz
@@ -1231,7 +1233,18 @@ tar zxvf /tmp/alertmanager.tar.gz -C /usr/local/alertmanager --strip-components=
 rm -rf /tmp/alertmanager.tar.gz
 systemctl restart alertmanager.service
 
-URL_CA=`curl -sL -o /dev/null -w %{url_effective} https://github.com/google/cadvisor/releases/latest`
+step1=$(curl -s https://api.github.com/repos/VictoriaMetrics/VictoriaMetrics/releases)
+step2=$(echo "$step1" | jq -r '.[] | select(.tag_name | contains("victorialogs"))')
+step3=$(echo "$step2" | jq -r '.assets[] | select(.name | contains("victoria-logs-linux-amd64")) | .browser_download_url')
+URL_VMU_LOGS=$(echo $step3 | grep -o 'https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/[^ ]*victoria-logs-linux-'''$(dpkg --print-architecture)'''-[^ ]*victorialogs.tar.gz' | head -1)
+echo $URL_VMU_LOGS
+wget -O /tmp/victoria-logs-linux-victorialogs.tar.gz  $URL_VMU_LOGS
+mkdir -p /usr/local/bin
+tar zxvf /tmp/victoria-logs-linux-victorialogs.tar.gz -C /usr/local/bin
+rm -rf /tmp/victoria-logs-linux-victorialogs.tar.gz
+systemctl restart victorialogs.service
+
+URL_CA=$(curl -sL -o /dev/null -w %{url_effective} https://github.com/google/cadvisor/releases/latest)
 VERSION_CA=${URL_CA##*/}
 wget -O /tmp/cadvisor https://github.com/google/cadvisor/releases/download/${VERSION_CA}/cadvisor-v${VERSION_CA#v}-linux-$(dpkg --print-architecture)
 mkdir -p /usr/local/cadvisor
@@ -1242,13 +1255,39 @@ ln -s /usr/local/cadvisor/cadvisor /usr/local/bin/cadvisor
 rm -rf /tmp/cadvisor
 systemctl restart cadvisor.service
 
+URL_LOKI=`curl -sL -o /dev/null -w %{url_effective} https://github.com/grafana/loki/releases/latest`
+VERSION_LOKI=${URL_LOKI##*/}
+wget -O /tmp/promtail.deb https://github.com/grafana/loki/releases/download/${VERSION_LOKI}/promtail_${VERSION_LOKI#v}_$(dpkg --print-architecture).deb
+dpkg -i /tmp/promtail.deb
+rm -rf /tmp/promtail.deb
+systemctl restart promtail.service
+
+URL_LOKI=`curl -sL -o /dev/null -w %{url_effective} https://github.com/grafana/loki/releases/latest`
+VERSION_LOKI=${URL_LOKI##*/}
+wget -O /tmp/loki.deb https://github.com/grafana/loki/releases/download/${VERSION_LOKI}/loki_${VERSION_LOKI#v}_$(dpkg --print-architecture).deb
+dpkg -i /tmp/loki.deb
+rm -rf /tmp/loki.deb
+systemctl restart loki.service
+
+# URL_VMU=`curl -sL -o /dev/null -w %{url_effective} https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest`
+# VERSION_VMU=${URL_VMU##*/}
+# wget -O /tmp/vmutils-linux-amd64.tar.gz https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${VERSION_VMU}/vmutils-linux-$(dpkg --print-architecture)-${VERSION_VMU}.tar.gz
+# mkdir -p /usr/local/victoriametrics-utils
+# tar zxvf /tmp/vmutils-linux-amd64.tar.gz -C /usr/local/victoriametrics-utils
+# rm -rf /tmp/vmutils-linux-amd64.tar.gz
+# systemctl restart victoriametrics-vmagent.service
+
 sleep 5
 
 systemctl status prometheus.service --no-pager -l
 systemctl status node_exporter.service --no-pager -l
 systemctl status victoriametrics.service --no-pager -l
 systemctl status alertmanager.service --no-pager -l
+systemctl status victorialogs.service --no-pager -l
 systemctl status cadvisor.service --no-pager -l
+systemctl status promtail.service --no-pager -l
+systemctl status loki.service --no-pager -l
+# systemctl status victoriametrics-vmagent.service --no-pager -l
 EOF
 chmod +x /etc/cron.weekly/observupdater.sh
 
