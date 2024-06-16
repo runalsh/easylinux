@@ -1361,6 +1361,10 @@ alias cp='cp -i'
 alias mv='mv -i'
 alias cls='clear'
 alias cd..='cd ..'
+alias a='ansible'
+alias ap='ansible-playbook'
+alias ad='ansible-doc'
+alias mo='molecule
 HISTCONTROL=ignorespace:ignoredups:erasedups
 shopt -s histappend
 shopt -s cmdhist
