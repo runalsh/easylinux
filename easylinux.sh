@@ -938,7 +938,7 @@ dpkg -i /tmp/loki.deb
 rm -rf /tmp/loki.deb
 mkdir -p /var/lib/loki
 mkdir -p /etc/loki
-sed -i 's/^User=loki/#User=loki/' /etc/systemd/system/multi-user.target.wants/loki.service
+sed -i 's/^User=loki/#User=loki/' /etc/systemd/system/loki.service
 cat << EOF > /etc/loki/config.yml
 auth_enabled: false
 
@@ -1023,7 +1023,7 @@ dpkg -i /tmp/promtail.deb
 rm -rf /tmp/promtail.deb
 mkdir -p /var/lib/promtail
 mkdir -p /etc/promtail
-sed -i 's/^User=promtail/#User=promtail/' /etc/systemd/system/multi-user.target.wants/promtail.service
+sed -i 's/^User=promtail/#User=promtail/' /etc/systemd/system/promtail.service
 cat << EOF > /etc/promtail/config.yml
 server:
   http_listen_port: 9080
