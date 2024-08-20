@@ -1378,6 +1378,8 @@ fi
 if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
+shopt -s histappend
+PROMPT_COMMAND="history -a;$PROMPT_COMMAND"
 EOF
 if [[ "$terraform" == "1" ]]; then
 cat << "EOF" > ~/.bashrc
@@ -1474,6 +1476,7 @@ set indicator
 include "/usr/share/nano/*.nanorc" 
 set constantshow    
 set softwrap
+set multibuffer
 bind Sh-M-U "{nextword}{mark}{prevword}{execute}|sed 's/.*/\U&/'{enter}" main
 bind Sh-M-L "{nextword}{mark}{prevword}{execute}|sed 's/.*/\L&/'{enter}" main
 bind Sh-M-C "{execute}|xsel -ib{enter}{undo}" main
@@ -1484,7 +1487,6 @@ bind ^Q exit all
 bind ^S savefile main
 bind ^W writeout main
 bind ^O insert main
-set multibuffer
 bind ^H help all
 bind ^H exit help
 bind ^F whereis all
