@@ -66,8 +66,8 @@ fi
 apt-get update
 apt-get install -y --no-install-recommends --no-install-suggests \
   kmod debian-archive-keyring tzdata software-properties-common lsb-release apt-transport-https apt-utils sudo coreutils make \
-  ncdu wget net-tools iputils-ping curl ca-certificates iproute2 dnsutils \
-  nano procps tree telnet tmux screen bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip zip unzip git lzma gpg
+  ncdu wget net-tools iputils-ping curl ca-certificates iproute2 dnsutils htop \
+  nano procps tree telnet tmux screen bash-completion grep gawk mc patch apache2-utils nmon jq tar python3 python3-pip zip unzip git lzma gpg xz-utils zstd
 #tig iptables-persistent
 timedatectl set-timezone Europe/Moscow
 echo "set -g mouse on" >> /etc/tmux.conf
@@ -1344,10 +1344,11 @@ alias m='micro'
 alias cls='clear'
 alias ipconfig='ifconfig'
 alias ns='netstat -tulnp'
-alias nsg='netstat -tulnp' | grep 
+alias nsg='netstat -tulnp | grep'
 alias iptl='iptables -xvnL --line-numbers'
 alias update='sudo apt-get update && sudo apt-get upgrade -y'
 export PATH="usr/local/bin:$PATH"
+export PROMPT_COMMAND='history -a'
 force_color_prompt=yes
 export LS_OPTIONS='--color=auto'
 alias dir='dir $LS_OPTIONS'
@@ -1364,13 +1365,13 @@ alias cd..='cd ..'
 alias a='ansible'
 alias ap='ansible-playbook'
 alias ad='ansible-doc'
-alias mo='molecule
+alias mo='molecule'
 HISTCONTROL=ignorespace:ignoredups:erasedups
 shopt -s histappend
 shopt -s cmdhist
 shopt -s checkwinsize
-HISTSIZE=10000
-HISTFILESIZE=20000
+HISTSIZE=10000000
+HISTFILESIZE=200000
 if [ -f ~/.bash_aliases ]; then
     . ~/.bash_aliases
 fi
@@ -1829,7 +1830,6 @@ WantedBy=multi-user.target
 EOF
 sudo mv /tmp/s1.service /etc/systemd/system/s1.service
 
-
 sudo systemctl daemon-reload
 sudo systemctl cat s1.service
 sudo systemctl enable s1.service
@@ -1856,13 +1856,75 @@ fi
 if [[ "$dry" == "1" ]]; then
 URL_DRY=`curl -sL -o /dev/null -w %{url_effective} https://github.com/moncho/dry/releases/latest`
 VERSION_DRY=${URL_DRY##*/}
-rm -rf /tmp
+mkdir -p /tmp
 wget -O /tmp/dry https://github.com/moncho/dry/releases/download/${VERSION_DRY}/dry-linux-$(dpkg --print-architecture)
 mv /tmp/dry /usr/local/bin/dry
 chmod +x /usr/local/bin/dry
 fi
+################### stunnel #####################################################################################################################################
+if [[ "$stunnel" == "1" ]]; then
+apt install stunnel4 -y
+mkdir /etc/stunnel
+cd /etc/stunnel && openssl genrsa -out key.pem 2048 && openssl req -new -x509 -subj "/C=de/CN=www.example.com" -key key.pem -out cert.pem && cat key.pem cert.pem >> stunnel.pem && rm key.pem cert.pem
+chmod 600  /etc/stunnel/stunnel.pem
+cat > /etc/stunnel/stunnel.conf <<EOF
+pid = /var/run/stunnel.pid
+cert = /etc/stunnel/stunnel.pem
+output	= /var/log/stunnel4/stunnel.log
+socket = r:TCP_NODELAY=1
+socket = l:TCP_NODELAY=1
+[ssh]
+accept = 0.0.0.0:443
+connect = 127.0.0.1:22
+setuid = nobody
+setgid = nogroup
+EOF
+fi
+################### tor #####################################################################################################################################
+if [[ "$tor" == "1" ]]; then
+apt-get install tor tor-geoipdb obfs4proxy -y
+cat > /etc/tor/torrc <<EOF
+SOCKSPort 0.0.0.0:449
+Log notice file /var/log/tor/notices.log
+ExcludeExitNodes {ru},{by},{kz},{??}
+PublishServerDescriptor 0
+RelayBandwidthRate 100 KB
+ServerTransportPlugin obfs4 exec /usr/bin/obfs4proxy
+BridgeRelay 0
+ClientOnly 1
+DirPort 451
+ExitRelay 0
+#SocksPolicy accept *
+SocksPolicy accept 0.0.0.0/0
+SocksPolicy reject *
+ExitPolicy reject *:* # no exits allowed
+ExitPolicy reject6 *:* # no exits allowed
+EOF
+systemctl restart tor
+fi
 
+################### sslh #####################################################################################################################################
+if [[ "$sslh" == "1" ]]; then
+docker run \
+  --cap-add CAP_NET_RAW \
+  --cap-add CAP_NET_BIND_SERVICE \
+  ghcr.io/yrutschle/sslh:latest \
+  -d --restart unless-stopped --name sslh  \
+  --listen=0.0.0.0:444 \
+  --ssh=localhost:22 \
+  --tls=localhost:443
+fi
+################### 3proxy #####################################################################################################################################
+if [[ "$proxy3" == "1" ]]; then
+docker run -d  --name 3proxy --restart unless-stopped \
+    -p "8082:3128/tcp" \
+    -p "8083:1080/tcp" \
+	-e "PROXY_LOGIN=$proxy3_user" \
+    -e "PROXY_PASSWORD=$proxy3_password" \
+    ghcr.io/tarampampam/3proxy:latest
+fi
 ################### END #####################################################################################################################################
+
 rm -rf /tmp/*
 apt {clean,autoclean}
 apt autoremove --yes
